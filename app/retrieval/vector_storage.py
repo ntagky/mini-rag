@@ -4,6 +4,9 @@ from typing import List
 from typing import Dict, Any
 from chromadb.config import Settings
 from dataclasses import dataclass, asdict
+from ..config.logger import get_logger
+
+logger = get_logger("mini-rag." + __name__)
 
 
 @dataclass(frozen=True)
@@ -42,15 +45,16 @@ class ChromaDB:
         """
         # Persistent client
         self.client = chromadb.PersistentClient(path=path, settings=Settings())
+        self.collection_name = collection_name
 
         # Safe get-or-create for collection
         existing_collections = [c.name for c in self.client.list_collections()]
         if collection_name in existing_collections:
             self.collection = self.client.get_collection(name=collection_name)
-            print(f"[ChromaDB] Loaded existing collection '{collection_name}'")
+            logger.debug(f"[ChromaDB] Loaded existing collection '{collection_name}'")
         else:
             self.collection = self.client.create_collection(name=collection_name)
-            print(f"[ChromaDB] Created new collection '{collection_name}'")
+            logger.debug(f"[ChromaDB] Created new collection '{collection_name}'")
 
     def add_items(
             self,
@@ -80,7 +84,7 @@ class ChromaDB:
             query_embeddings: List[List[float]],
             n_results: int = 5,
             where: Dict[str, Any] = None
-    ) -> List[Dict]:
+    ) -> List[List[dict]]:
         """
         Search for similar vectors.
         Returns a structured list of results for each query.
@@ -111,3 +115,8 @@ class ChromaDB:
         """
         self.collection.delete(ids=ids)
         print(f"[ChromaDB] Deleted {len(ids)} items")
+
+    def reset(self):
+        self.client.delete_collection(self.collection_name)
+        print(f"[ChromaDB] Deleted all items")
+        self.collection = self.client.create_collection(name=self.collection_name)

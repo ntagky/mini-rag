@@ -12,5 +12,4 @@ class Embedder:
 
     def embed(self, texts: list[str]):
         query_embeddings = self.model.encode_query(texts, prompt_name="query")
-        print(query_embeddings)
         return query_embeddings

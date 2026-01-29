@@ -155,5 +155,3 @@ To avoid confusion over terminology, sponsors are encouraged to replace the phra
 The ICH E3 guidance provides examples of the types of deviations that are generally considered important protocol deviations and that should be described in section 10.2 and included in the listing in Appendix 16.2.2.  The definition of important protocol deviations for a particular trial is determined in part by study design, the critical procedures, study data, subject protections described in the protocol, and the planned analyses of study data.  In keeping with the flexibility of the guidance, sponsors can amend or add to the examples of important deviations provided in ICH E3 in consideration of a trial's requirements.  Substantial additions or changes should be clearly described for the reviewer.
 
 ## Contains Nonbinding Recommendations
-
-<!-- image -->

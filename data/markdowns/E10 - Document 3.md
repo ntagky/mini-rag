@@ -618,8 +618,6 @@ Figure 1: Choosing the Concurrent Control for Demonstrating Efficacy
 
 This figure shows the basic logic for choosing the control group; the decision may depend on the available drugs or medical practices in the specific region.
 
-<!-- image -->
-
 ## ↓ YES
 
 -----------------------------

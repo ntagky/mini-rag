@@ -1,13 +1,18 @@
 from app.config.configer import WELCOMING_MESSAGE_LOGO
+from app.orchestrator.pipeline import ingest_corpus, post_query
+from app.config.logger import setup_logging, get_logger
+
+setup_logging()
+logger = get_logger("mini-rag." + __name__)
 
 
 def runner():
-    print(WELCOMING_MESSAGE_LOGO)
-    print()
-    print("Commands:")
-    print("  /ingest [--rescan]   → scan and ingest corpus")
-    print("  /query <your question> [--top-k N] → ask a question over corpus")
-    print("  /bye → quit session")
+    logger.info(WELCOMING_MESSAGE_LOGO)
+    logger.info("")
+    logger.info("Commands:")
+    logger.info("  ingest [--reset] → scan and ingest corpus")
+    logger.info("  query <your question> [--top-k N] → ask a question over corpus")
+    logger.info("  exit → quit session")
 
     while True:
         try:
@@ -16,23 +21,22 @@ def runner():
                 continue
 
             # Exit condition
-            if user_input.lower() == "/bye":
-                print("Goodbye!")
+            if user_input.lower() == "exit":
                 break
 
             # Parse /ingest command
-            if user_input.startswith("/ingest"):
-                rescan = "--rescan" in user_input
-                print(f"Ingesting corpus (rescan={rescan})...")
-                # ingest_corpus(rescan=rescan)
+            if user_input.startswith("ingest"):
+                reset = "--reset" in user_input
+                logger.info(f"Ingesting corpus{' after erasing current data' if reset else ''}...")
+                ingest_corpus(reset=reset)
                 continue
 
             # Parse /query command
-            if user_input.startswith("/query"):
+            if user_input.startswith("query"):
                 # Split on space after command
                 parts = user_input.split()
                 if len(parts) < 2:
-                    print("Error: /query requires a question.")
+                    logger.info("Error: query requires a question.")
                     continue
 
                 # Extract top-k if specified
@@ -45,18 +49,19 @@ def runner():
                         parts.pop(idx)
                         parts.pop(idx)  # remove the number too
                     except (IndexError, ValueError):
-                        print("Error: --top-k requires an integer")
+                        logger.info("Error: --top-k requires an integer")
                         continue
 
+                # Post question
                 question = " ".join(parts[1:])
-                print(f"Running query: {question} (top_k={top_k})...")
-                # run_query(question=question, top_k=top_k)
+                logger.debug(f"Running query: {question} with top_k={top_k}...")
+                post_query(question=question, top_k=top_k)
                 continue
 
             # Unknown command
-            print("Unknown command. Available: /ingest, /query, /bye")
+            logger.info("Unknown command. Available: ingest, query, exit")
 
         except KeyboardInterrupt:
-            print("\nInterrupted! Type /bye to exit.")
+            logger.warning("\nInterrupted! Type exit to exit.")
         except Exception as e:
-            print(f"Error: {e}")
+            logger.error(f"Error: {e}")

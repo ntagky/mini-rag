@@ -4,6 +4,9 @@ from docling_core.transforms.chunker.tokenizer.base import BaseTokenizer
 from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTokenizer
 from transformers import AutoTokenizer
 from app.config.configer import SENTENCE_TRANSFORMER_MODEL_LOCAL_PATH
+from ..config.logger import get_logger
+
+logger = get_logger("mini-rag." + __name__)
 
 
 class Chunker:
@@ -18,7 +21,6 @@ class Chunker:
         chunk_iter = self.chunker.chunk(dl_doc=doc)
         for i, chunk in enumerate(chunk_iter):
             enriched_text = self.chunker.contextualize(chunk=chunk)
-            print(f"chunker.contextualize(chunk):\n{f'{enriched_text}'!r}")
-            print()
+            logger.debug(f"chunker.contextualize(chunk):\n{f'{enriched_text}'!r}\n")
             chunks.append(enriched_text)
         return chunks

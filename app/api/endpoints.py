@@ -2,7 +2,9 @@ from server import app
 from typing import Optional
 from pydantic import BaseModel
 from fastapi import HTTPException
+from ..config.logger import get_logger
 
+logger = get_logger("mini-rag." + __name__)
 
 class QueryRequest(BaseModel):
     question: str

@@ -45,7 +45,6 @@ class IngestionDB:
                 )
             """)
 
-    @staticmethod
     def _table_exists(conn, table_name: str) -> bool:
         cursor = conn.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
@@ -106,3 +105,8 @@ class IngestionDB:
             )
             for row in rows
         ]
+
+    def reset(self):
+        with self._connect() as conn:
+            conn.execute("DELETE FROM ingested_files;")
+            print(f"Deleted all items from SQL db.")
