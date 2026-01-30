@@ -3,7 +3,7 @@ from docling_core.transforms.chunker.hybrid_chunker import HybridChunker
 from docling_core.transforms.chunker.tokenizer.base import BaseTokenizer
 from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTokenizer
 from transformers import AutoTokenizer
-from app.config.configer import SENTENCE_TRANSFORMER_MODEL_LOCAL_PATH
+from app.config.configer import OFFLINE_SENTENCE_TRANSFORMER_MODEL_LOCAL_PATH
 from ..config.logger import get_logger
 
 logger = get_logger("mini-rag." + __name__)
@@ -11,7 +11,7 @@ logger = get_logger("mini-rag." + __name__)
 
 class Chunker:
     def __init__(self):
-        tokenizer = AutoTokenizer.from_pretrained(SENTENCE_TRANSFORMER_MODEL_LOCAL_PATH)
+        tokenizer = AutoTokenizer.from_pretrained(OFFLINE_SENTENCE_TRANSFORMER_MODEL_LOCAL_PATH)
         max_tokens = tokenizer.model_max_length
         base_tokenizer: BaseTokenizer = HuggingFaceTokenizer(tokenizer=tokenizer, max_tokens=max_tokens)
         self.chunker = HybridChunker(tokenizer=base_tokenizer, max_tokens=max_tokens)

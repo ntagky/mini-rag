@@ -17,14 +17,22 @@ MARKDOWN_DIR = Path("data/markdowns")
 TMP_DIR = Path(".tmp")
 LOG_DIR = Path(".logs")
 
+# DATABASE STORAGE
+SQLITE_DIR = Path(".db/sqlite")
+TFIDF_DIR = Path(".db/tfidf")
+
 # MODELS
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 OLLAMA_BASE_URL = "http://localhost:11434"
 SENTENCE_TRANSFORMER_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-SENTENCE_TRANSFORMER_MODEL_LOCAL_PATH = ".local_models/sentence-transformers/all-MiniLM-L6-v2"
+SENTENCE_TRANSFORMER_DIMENSIONS = 384
+OFFLINE_SENTENCE_TRANSFORMER_MODEL_LOCAL_PATH = ".models/sentence-transformers/all-MiniLM-L6-v2"
+OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
+OPENAI_EMBEDDING_DIMENSIONS = 512
+OPENAI_COMPLETION_MODEL = "gpt-4.1-mini"
+OLLAMA_CHAT_MODEL = "llava:7b"
 
 # PROMPTS
-
 SYSTEM_PROMPT_IMAGE_DESCRIBER = """
 You are a technical vision model.
 Your task is to describe what is visually present in the image.
@@ -55,3 +63,38 @@ Rules:
 - Cite sources using [file:page:chunk_id]
 - Be concise and factual
 """
+
+SYSTEM_PROMPT_PLANNER = """
+You are a reasoning agent planner for a RAG system. 
+Your job is to generate a JSON object containing all the configurable plan options for answering a user's question. 
+Do not add explanations, text, or comments. 
+Only output valid JSON.
+"""
+
+USER_PROMPT_PLANNER = """
+Generate a JSON object containing all available plan options for a RAG agent. 
+Each option should have an array of possible values. 
+Only output JSON. 
+Do not include explanations, descriptions, or any text outside the JSON.
+
+Pick one value from this JSON based on the following question and return the corresponding JSON:
+{
+  "retrieval_strategy": ["vector_only", "tfidf_fallback", "vector+tfidf_fallback"],
+  "top_k": [1, 3, 5, 10, 20],
+  "include_images": [true, false],
+  "draft_style": ["concise", "detailed", "explain_reasoning"],
+  "citation_style": ["inline", "footnotes", "minimal", "full_trace"],
+  "fallback_threshold": [0.0, 0.1, 0.25, 0.5],
+  "summarize_before_answer": [true, false],
+  "chunk_prioritization": ["none", "most_recent", "document_type_priority"],
+  "evidence_highlighting": [true, false],
+  "query_rewriting": [true, false],
+  "confidence_tagging": [true, false]
+}
+Do not include trailing commas or extra newlines.
+
+Question: 
+"""
+
+# RETRIEVAL STRATEGY
+MIN_SCORE_THRESHOLD = 0.5

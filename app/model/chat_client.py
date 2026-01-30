@@ -1,11 +1,17 @@
 import ollama
+from enum import Enum
 from openai import OpenAI
 from typing import List, Union
 from abc import ABC, abstractmethod
 from typing import TypedDict, Literal
-from ..config.configer import OLLAMA_BASE_URL, OPENAI_API_KEY
-from openai.types.chat import ChatCompletionUserMessageParam, ChatCompletionSystemMessageParam, ChatCompletionAssistantMessageParam
+from dataclasses import dataclass
+from openai.types.chat import (
+    ChatCompletionUserMessageParam, ChatCompletionSystemMessageParam, ChatCompletionAssistantMessageParam
+)
 from ..config.logger import get_logger
+from ..config.configer import (
+    OLLAMA_BASE_URL, OPENAI_API_KEY, OPENAI_EMBEDDING_MODEL, OPENAI_COMPLETION_MODEL, OLLAMA_CHAT_MODEL, OPENAI_EMBEDDING_DIMENSIONS
+)
 
 logger = get_logger("mini-rag." + __name__)
 
@@ -16,14 +22,24 @@ OpenAIMessage = Union[
 ]
 
 
+@dataclass
 class ChatContent(TypedDict, total=False):
     text: str
     image: bytes
 
 
+@dataclass
 class ChatMessage(TypedDict):
     role: Literal["system", "user", "assistant"]
     content: List[ChatContent]
+
+
+class LlmModel(Enum):
+    OPENAI = "openai"
+    OLLAMA = "ollama"
+
+
+DEFAULT_LLM_MODEL = LlmModel.OPENAI
 
 
 class BaseLLM(ABC):
@@ -31,22 +47,17 @@ class BaseLLM(ABC):
     def chat(self, messages: List[ChatMessage]) -> str:
         pass
 
+    @abstractmethod
     def chat_streaming(self, messages: List[ChatMessage]) -> str:
         pass
 
 
 class ChatClient:
-    def __init__(self, model: str, temperature: float = 0.0):
-        if model.startswith("gpt-"):
-            self.llm: BaseLLM = OpenAILLM(
-                model=model,
-                temperature=temperature,
-            )
+    def __init__(self, model: LlmModel, temperature: float = 0.0):
+        if model == LlmModel.OPENAI:
+            self.llm: BaseLLM = OpenAILLM(temperature=temperature)
         else:
-            self.llm: BaseLLM = OllamaLLM(
-                model=model,
-                temperature=temperature,
-            )
+            self.llm: BaseLLM = OllamaLLM(temperature=temperature)
 
     def chat(self, messages: List[ChatMessage], stream: bool = False) -> str:
         if stream:
@@ -55,8 +66,8 @@ class ChatClient:
 
 
 class OllamaLLM(BaseLLM):
-    def __init__(self, model: str = "llava:7b", temperature: float = 0.0):
-        self.model = model
+    def __init__(self, temperature: float = 0.0):
+        self.model = OLLAMA_CHAT_MODEL
         self.base_url = OLLAMA_BASE_URL
         self.temperature = temperature
 
@@ -82,7 +93,7 @@ class OllamaLLM(BaseLLM):
             options={
                 "temperature": self.temperature,
             },
-            stream=True,  # ← THIS enables streaming
+            stream=True,
         )
 
         full_response = []
@@ -98,7 +109,8 @@ class OllamaLLM(BaseLLM):
         _log_response(self.model, response)
         return response
 
-    def _to_ollama_messages(self, messages: list[ChatMessage]):
+    @staticmethod
+    def _to_ollama_messages(messages: list[ChatMessage]):
         ollama_messages = []
 
         for msg in messages:
@@ -125,8 +137,9 @@ class OllamaLLM(BaseLLM):
 
 
 class OpenAILLM(BaseLLM):
-    def __init__(self, model: str = "gpt-4.1-mini", temperature: float = 0.0):
-        self.model = model
+    def __init__(self, temperature: float = 0.0):
+        self.model = OPENAI_COMPLETION_MODEL
+
         self.temperature = temperature
         self.client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -138,7 +151,6 @@ class OpenAILLM(BaseLLM):
             messages=openai_messages,
             max_tokens=4096
         )
-
 
         return response.choices[0].message.content
 
@@ -169,7 +181,8 @@ class OpenAILLM(BaseLLM):
         _log_response(self.model, response)
         return response
 
-    def _to_openai_messages(self, messages: list[ChatMessage]) -> List[OpenAIMessage]:
+    @staticmethod
+    def _to_openai_messages(messages: list[ChatMessage]) -> List[OpenAIMessage]:
         converted: List[OpenAIMessage] = []
 
         for msg in messages:
@@ -190,6 +203,11 @@ class OpenAILLM(BaseLLM):
                 })
 
         return converted
+
+    def embed(self, texts: list[str]):
+        response = self.client.embeddings.create(input=texts, model=OPENAI_EMBEDDING_MODEL, dimensions=OPENAI_EMBEDDING_DIMENSIONS)
+        arr = [data.embedding for data in response.data]
+        return arr
 
 
 def _log_response(model: str, response: str):

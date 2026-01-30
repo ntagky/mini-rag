@@ -7,7 +7,7 @@ from docling.datamodel.base_models import InputFormat
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling.datamodel.pipeline_options import (PdfPipelineOptions, TableStructureOptions)
 from docling.datamodel.document import ConversionResult
-from docling_core.types.doc.document import PictureItem, DocItemLabel, SectionHeaderItem
+from docling_core.types.doc.document import PictureItem, DocItemLabel
 from ..config.logger import get_logger
 
 logger = get_logger("mini-rag." + __name__)
@@ -71,7 +71,7 @@ class PdfToMarkdownConverter:
                         data = picture_uri.split(",")[1]
                         decoded_bytes = base64.b64decode(data)
                         with open(element_image_filename, "wb") as f:
-                            print(f"Saved {element_image_filename} image")
+                            logger.debug(f"Saved image at: {element_image_filename}")
                             f.write(decoded_bytes)
 
                         response = self.chat_client.chat([
@@ -87,7 +87,6 @@ class PdfToMarkdownConverter:
                                 ],
                             }
                         ])
-                        print(response)
 
                         new_text = result.document.add_text(
                             label=DocItemLabel.TEXT,

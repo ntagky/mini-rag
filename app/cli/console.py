@@ -1,6 +1,7 @@
 from app.config.configer import WELCOMING_MESSAGE_LOGO
 from app.orchestrator.pipeline import ingest_corpus, post_query
 from app.config.logger import setup_logging, get_logger
+from app.model.chat_client import LlmModel, DEFAULT_LLM_MODEL
 
 setup_logging()
 logger = get_logger("mini-rag." + __name__)
@@ -10,8 +11,8 @@ def runner():
     logger.info(WELCOMING_MESSAGE_LOGO)
     logger.info("")
     logger.info("Commands:")
-    logger.info("  ingest [--reset] → scan and ingest corpus")
-    logger.info("  query <your question> [--top-k N] → ask a question over corpus")
+    logger.info(f"  ingest [--reset] → scan and ingest corpus")
+    logger.info(f"  query <your question> [--top-k N] [--model {'|'.join([e.value for e in LlmModel])}] → ask a question over corpus")
     logger.info("  exit → quit session")
 
     while True:
@@ -27,7 +28,7 @@ def runner():
             # Parse /ingest command
             if user_input.startswith("ingest"):
                 reset = "--reset" in user_input
-                logger.info(f"Ingesting corpus{' after erasing current data' if reset else ''}...")
+                logger.debug(f"Ingesting corpus{' after erasing current data' if reset else ''}...")
                 ingest_corpus(reset=reset)
                 continue
 
@@ -38,6 +39,21 @@ def runner():
                 if len(parts) < 2:
                     logger.info("Error: query requires a question.")
                     continue
+
+                # Extract model if specified
+                model = DEFAULT_LLM_MODEL
+                if "--model" in parts:
+                    idx = parts.index("--model")
+                    try:
+                        option = parts[idx + 1]
+                        if option == LlmModel.OLLAMA.value:
+                            model = LlmModel.OLLAMA
+                            # Remove from parts
+                        parts.pop(idx)
+                        parts.pop(idx)
+                    except (IndexError, ValueError):
+                        logger.debug("Error: --model does not exist, moving with default")
+                        continue
 
                 # Extract top-k if specified
                 top_k = 5  # default
@@ -54,8 +70,8 @@ def runner():
 
                 # Post question
                 question = " ".join(parts[1:])
-                logger.debug(f"Running query: {question} with top_k={top_k}...")
-                post_query(question=question, top_k=top_k)
+                logger.debug(f"Running query: '{question}' with top_k={top_k} and model={model.value}...")
+                post_query(question=question, top_k=top_k, model=model)
                 continue
 
             # Unknown command

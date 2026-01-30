@@ -5,10 +5,10 @@ from pydantic import BaseModel
 from docling_core.types import DoclingDocument
 from .hasher import hash_content
 from .converter import PdfToMarkdownConverter
+from ..config.logger import get_logger
+from ..retrieval.persistor import File
 from ..model.chat_client import ChatClient
 from ..config.configer import CORPUS_DIR, MARKDOWN_DIR
-from ..retrieval.sql_storage import IngestedFile
-from ..config.logger import get_logger
 
 logger = get_logger("mini-rag." + __name__)
 
@@ -50,7 +50,7 @@ class CorpusLoader:
         return corpus_files
 
     @staticmethod
-    def get_unprocessed_files(corpus_files: List[CorpusFile], ingested_files: List[IngestedFile]) -> List[str]:
+    def get_unprocessed_files(corpus_files: List[CorpusFile], ingested_files: List[File]) -> List[str]:
         unprocessed = []
         for corpus_file in corpus_files:
             found = False

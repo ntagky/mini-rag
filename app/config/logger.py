@@ -47,21 +47,20 @@ def setup_logging(log_dir: str = LOG_DIR) -> None:
         f"rag_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
     )
 
-
     logging.getLogger("httpx").setLevel(logging.WARNING)
 
     root = logging.getLogger("mini-rag")
     root.setLevel(logging.DEBUG)
     root.propagate = False
 
-    # Console
+    # Console configuration
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(
         logging.Formatter("%(message)s")
     )
 
-    # File (JSON)
+    # File configuration - JSON
     file_handler = logging.FileHandler(log_file)
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(JsonFormatter())
