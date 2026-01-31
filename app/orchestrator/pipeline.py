@@ -1,13 +1,13 @@
 import uuid
 from pathlib import Path
-from ..config.configer import TMP_DIR, SYSTEM_PROMPT_SINGLE_RESPONSE_DESCRIBER, OPENAI_EMBEDDING_DIMENSIONS
+from ..config.configer import TMP_DIR, OPENAI_EMBEDDING_DIMENSIONS
 from ..agent.rag_agent import RAGAgent
 from ..ingestion.chunker import Chunker
 from ..ingestion.loader import CorpusLoader
-from ..retrieval.embedder import Embedder, EmbedderModel, DEFAULT_EMBEDDER_MODEL
+from ..retrieval.embedder import Embedder, EmbedderModel
 from ..retrieval.indexer import ElasticsearchIndex, ChunkMetadata, DocumentChunk, DocumentChunkDistant
 from ..retrieval.persistor import SqliteDb, File
-from ..model.chat_client import ChatClient, LlmModel, DEFAULT_LLM_MODEL
+from ..model.chat_client import ChatClient, LlmModel, ChatMessage, ChatContent, DEFAULT_LLM_MODEL
 from ..config.logger import get_logger
 from ..retrieval.ranker import TfidfRank, TfidfRetriever
 
@@ -73,33 +73,22 @@ def ingest_corpus(reset: bool = False):
         logger.info("Corpus files are up to date.")
 
 
-def post_query(question: str, top_k: int, model: LlmModel = DEFAULT_LLM_MODEL, is_cli: bool = False):
+def post_query(question: str, messages: list[ChatMessage], top_k: int, model: LlmModel = DEFAULT_LLM_MODEL, is_cli: bool = False):
     if model != DEFAULT_LLM_MODEL:
         current_chat_client = ChatClient(model.value)
     else:
         current_chat_client = chat_client
 
+    if len(messages) == 0:
+        messages = [ChatMessage(role="user", content=[ChatContent(text=question)])]
+
     agent = RAGAgent(embedder, elastic_index, tfidf_retriever, current_chat_client)
     plan = agent.generate_plan(question, top_k)
+    if "quick_answer" in plan and plan["quick_answer"]:
+        return plan["quick_answer"]
+    if "query_rewriting" in plan and plan["query_rewriting"]:
+        question = agent.rewrite_question(messages[:-6:-2])
     chunks = agent.retrieve_chunks(question, plan)
-    response = agent.draft_response(question, chunks, plan, is_cli=is_cli)
+    last_messages = messages[-6:]
+    response = agent.draft_response(last_messages, question, chunks, plan, is_cli=is_cli)
     return response
-
-    # embedding = embedder.embed([question])[0]
-    # chunks: list[DocumentChunkDistant] = elastic_index.similarity_search(embedding, top_k)
-    #
-    # if len(chunks) != top_k:
-    #     logger.info(f"Getting help from TF-IDF for {top_k - len(chunks)}")
-    #     chunks.extend(tfidf_retriever.retrieve(question, top_k - len(chunks)))
-    #
-    # user_prompt = _build_user_prompt(question, chunks)
-    # _ = current_chat_client.chat([
-    #     {
-    #         "role": "system",
-    #         "content": [{"text": SYSTEM_PROMPT_SINGLE_RESPONSE_DESCRIBER}],
-    #     },
-    #     {
-    #         "role": "user",
-    #         "content": [{"text": user_prompt}]
-    #     }
-    # ], stream=True)

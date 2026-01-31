@@ -1,9 +1,11 @@
 import json
-from ..model.chat_client import ChatClient
+from ..model.chat_client import ChatClient, ChatMessage
 from ..retrieval.embedder import Embedder
 from ..retrieval.indexer import ElasticsearchIndex
 from ..retrieval.ranker import TfidfRetriever
-from ..config.configer import SYSTEM_PROMPT_PLANNER, USER_PROMPT_PLANNER, SYSTEM_PROMPT_SINGLE_RESPONSE_DESCRIBER
+from ..config.configer import (
+    SYSTEM_PROMPT_PLANNER, USER_PROMPT_PLANNER, SYSTEM_PROMPT_SINGLE_RESPONSE_DESCRIBER, SYSTEM_PROMPT_REWRITER
+)
 
 
 class RAGAgent:
@@ -31,16 +33,47 @@ class RAGAgent:
         ])
         print(plan_json)
         plan = self._parse_plan_options(plan_json)
-        if top_k in plan:
+        if "top_k" in plan and top_k > 0:
             plan['top_k'] = top_k
 
         return plan
+
+    def rewrite_question(self, messages: list[ChatMessage]):
+        question = f"Current question:\n {messages[0].get('content')[0].get('text')}\n\n"
+        question += "Previous user questions:\n"
+        for message in messages[1:]:
+            question += f"- {message.get('content')[0].get('text')}\n"
+
+        print([
+            {
+                "role": "system",
+                "content": [{"text": SYSTEM_PROMPT_REWRITER}],
+            },
+            {
+                "role": "user",
+                "content": [{"text": question}]
+            }
+        ])
+        response = self.chat_client.chat([
+            {
+                "role": "system",
+                "content": [{"text": SYSTEM_PROMPT_REWRITER}],
+            },
+            {
+                "role": "user",
+                "content": [{"text": question}]
+            }
+        ])
+        print(response)
+        return response
+
 
     def retrieve_chunks(self, question: str, plan: dict) -> list:
         """
         Returns a list of chunks according to the plan.
         Includes fallback logic if needed.
         """
+        print(plan)
         embedding = self.embedder.embed([question])[0]
         chunks = self.retriever.similarity_search(embedding, top_k=plan["top_k"], threshold=plan["fallback_threshold"])
         if plan["retrieval_strategy"].endswith("tfidf_fallback") and len(chunks) < plan["top_k"]:
@@ -48,12 +81,12 @@ class RAGAgent:
             chunks.extend(fallback_chunks)
         return chunks
 
-    def draft_response(self, question: str, chunks: list, plan: dict, is_cli: False) -> str:
+    def draft_response(self, messages: list[ChatMessage], question: str, chunks: list, plan: dict, is_cli: False) -> str:
         """
         Returns the generated answer text from LLM.
         """
         prompt = self._build_user_prompt(question, chunks, plan)
-        response = self.chat_client.chat([
+        messages.extend([
             {
                 "role": "system",
                 "content": [{"text": SYSTEM_PROMPT_SINGLE_RESPONSE_DESCRIBER}],
@@ -62,7 +95,8 @@ class RAGAgent:
                 "role": "user",
                 "content": [{"text": prompt}]
             }
-        ], stream=is_cli)
+        ])
+        response = self.chat_client.chat(messages, stream=is_cli)
         return response
 
     # ----------------

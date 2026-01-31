@@ -6,17 +6,12 @@ import { MessageInput } from "@/components/ui/message-input"
 import { MessageList } from "@/components/ui/message-list"
 import { PromptSuggestions } from "@/components/ui/prompt-suggestions"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
-import { getModels } from "@/lib/api"
+import { getModels, sendChatQuery } from "@/lib/api"
+import { Message, MessageWithId } from "@/lib/dataclasses"
 
-
-type Message = {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-}
 
 export function ChatInterface() {
-    const [messages, setMessages] = useState<Message[]>([])
+    const [messages, setMessages] = useState<MessageWithId[]>([]) //[{"id": "dadw", "role": "user", "content": "Adwad"}]
     const [input, setInput] = useState("")
     const [isLoading, setIsLoading] = useState(false)
     const [models, setModels] = useState<string[]>([]);
@@ -50,50 +45,48 @@ export function ChatInterface() {
         loadModels();
     }, []);
 
-    // 1. Handle input changes
     const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
         setInput(e.target.value)
     }
 
-    // 2. The custom fetch logic
     const handleSubmit = async (event?: { preventDefault?: () => void }) => {
         event?.preventDefault?.();
-        if (!input.trim() || isLoading) return
+        if (!input.trim() || isLoading) return;
 
         const userMessage: Message = {
-        id: Date.now().toString(),
-        role: "user",
-        content: input,
-        }
+            role: "user",
+            content: input,
+        };
 
-        // Update UI immediately
-        setMessages((prev) => [...prev, userMessage])
-        setInput("")
-        setIsLoading(true)
+        const updatedHistory = [...messages, { ...userMessage, id: Date.now().toString() }];
+        
+        setMessages(updatedHistory as MessageWithId[]);
+        setInput("");
+        setIsLoading(true);
 
         try {
-        const response = await fetch("http://localhost:8000/query", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ query: userMessage.content }), // Adjust key to match your backend
-        })
+            const historyForBackend = updatedHistory.map(({ role, content }) => ({ role, content }));
+            
+            const aiStringResponse = await sendChatQuery(historyForBackend, selectedModel);
 
-        if (!response.ok) throw new Error("Failed to fetch")
+            const assistantMessage = {
+                id: (Date.now() + 1).toString(),
+                role: "assistant" as const,
+                content: aiStringResponse,
+            };
 
-        const data = await response.json()
-        
-        const assistantMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            role: "assistant",
-            content: data.response || data.content || "No response received",
-        }
-
-        setMessages((prev) => [...prev, assistantMessage])
+            setMessages((prev) => [...prev, assistantMessage]);
         } catch (error) {
-        console.error("Chat Error:", error)
-        // Optional: Add an error message to the chat UI here
+            const assistantMessage = {
+                id: (Date.now() + 1).toString(),
+                role: "assistant" as const,
+                content: "Something went wrong. Please refresh the page and try again!",
+            };
+
+            setMessages((prev) => [...prev, assistantMessage]);
+            setIsLoading(true)
         } finally {
-        setIsLoading(false)
+            setIsLoading(false);
         }
     }
 
@@ -107,7 +100,7 @@ export function ChatInterface() {
     const isTyping = isLoading // In this custom setup, loading = typing
 
     return (
-        <ChatContainer className="flex-1 py-4">
+        <ChatContainer className="flex-1 overflow-y-auto">
         {isEmpty ? (
             <div className="flex flex-col">
                 <Select value={selectedModel} onValueChange={setSelectedModel}>
@@ -134,7 +127,7 @@ export function ChatInterface() {
 
         {!isEmpty ? (
             <ChatMessages messages={messages}>
-            <MessageList messages={messages} isTyping={isTyping} />
+                <MessageList messages={messages} isTyping={isTyping} />
             </ChatMessages>
         ) : null}
             

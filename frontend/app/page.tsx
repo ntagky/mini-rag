@@ -49,7 +49,7 @@ export default function Home() {
           </div>
         </header>
         <Separator />
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+        <div className="flex flex-1 h-screen overflow-y-auto flex-col gap-4 p-4 pt-0">
           <ChatInterface></ChatInterface>
         </div>
       </SidebarInset>

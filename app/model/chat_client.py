@@ -3,7 +3,8 @@ from enum import Enum
 from openai import OpenAI
 from typing import List, Union
 from abc import ABC, abstractmethod
-from typing import TypedDict, Literal
+from typing import Literal
+from typing_extensions import TypedDict
 from dataclasses import dataclass
 from openai.types.chat import (
     ChatCompletionUserMessageParam, ChatCompletionSystemMessageParam, ChatCompletionAssistantMessageParam

@@ -71,7 +71,7 @@ def runner():
                 # Post question
                 question = " ".join(parts[1:])
                 logger.debug(f"Running query: '{question}' with top_k={top_k} and model={model.value}...")
-                post_query(question=question, top_k=top_k, model=model, is_cli=True)
+                post_query(question=question, messages=[], top_k=top_k, model=model, is_cli=True)
                 continue
 
             # Unknown command
