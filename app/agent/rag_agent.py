@@ -15,7 +15,7 @@ class RAGAgent:
         self.fallback_retriever = fallback_retriever
         self.chat_client = chat_client
 
-    def generate_plan(self, question: str) -> dict:
+    def generate_plan(self, question: str, top_k: int) -> dict:
         """
         Returns a dict describing the plan.
         """
@@ -31,6 +31,9 @@ class RAGAgent:
         ])
         print(plan_json)
         plan = self._parse_plan_options(plan_json)
+        if top_k in plan:
+            plan['top_k'] = top_k
+
         return plan
 
     def retrieve_chunks(self, question: str, plan: dict) -> list:
@@ -45,7 +48,7 @@ class RAGAgent:
             chunks.extend(fallback_chunks)
         return chunks
 
-    def draft_response(self, question: str, chunks: list, plan: dict) -> str:
+    def draft_response(self, question: str, chunks: list, plan: dict, is_cli: False) -> str:
         """
         Returns the generated answer text from LLM.
         """
@@ -59,7 +62,7 @@ class RAGAgent:
                 "role": "user",
                 "content": [{"text": prompt}]
             }
-        ])
+        ], stream=is_cli)
         return response
 
     # ----------------

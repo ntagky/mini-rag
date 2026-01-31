@@ -1,45 +1,47 @@
-from server import app
-from typing import Optional
+from typing import List
 from pydantic import BaseModel
-from fastapi import HTTPException
+from fastapi import HTTPException, APIRouter
 from ..config.logger import get_logger
+from ..orchestrator.pipeline import post_query
+from ..model.chat_client import LlmModel, DEFAULT_LLM_MODEL
 
 logger = get_logger("mini-rag." + __name__)
 
+router = APIRouter()
+
+
+class Message(BaseModel):
+    role: str
+    content: str
+
+
 class QueryRequest(BaseModel):
-    question: str
-    top_k: Optional[int] = 5
+    messages: List[Message]
+    model: str
 
 
-class IngestRequest(BaseModel):
-    rescan: Optional[bool] = False
-
-
-@app.get("/health")
+@router.get("/health")
 def health():
     return {"status": "ok"}
 
 
-@app.post("/query")
-def query_endpoint(request: QueryRequest):
-    if not request.question.strip():
-        raise HTTPException(status_code=400, detail="Question cannot be empty")
-
-    try:
-        # Call the same run_query pipeline as CLI
-        # result = run_query(
-        #     question=request.question,
-        #     top_k=request.top_k
-        # )
-        return {"answer": "result"}  # result can include text + citations
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@router.get("/api/v1/models")
+def get_models():
+    return [model.value for model in LlmModel]
 
 
-@app.post("/ingest")
-def ingest_endpoint(request: IngestRequest):
-    try:
-        # ingest_corpus(rescan=request.rescan)
-        return {"status": "ingestion completed", "rescan": request.rescan}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@router.post("/api/v1/chat")
+async def query(request: QueryRequest):
+    # 'request.messages' is now a list of objects you can iterate through
+    # 'request.model' tells you which model the user selected
+
+    # Example logic:
+    model = LlmModel(request.model).name if LlmModel.has_value(request.model) else DEFAULT_LLM_MODEL
+    print(f"Using model: {request.model}")
+    question = request.messages[-1].content
+
+    post_query(question=question, top_k=-1, )
+
+    ai_response = f"I am {request.model}. You said: {last_user_message}"
+
+    return {"response": ai_response}

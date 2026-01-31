@@ -73,34 +73,33 @@ def ingest_corpus(reset: bool = False):
         logger.info("Corpus files are up to date.")
 
 
-def post_query(question: str, top_k: int, model: LlmModel = DEFAULT_LLM_MODEL):
+def post_query(question: str, top_k: int, model: LlmModel = DEFAULT_LLM_MODEL, is_cli: bool = False):
     if model != DEFAULT_LLM_MODEL:
         current_chat_client = ChatClient(model.value)
     else:
         current_chat_client = chat_client
 
     agent = RAGAgent(embedder, elastic_index, tfidf_retriever, current_chat_client)
-    plan = agent.generate_plan(question)
+    plan = agent.generate_plan(question, top_k)
     chunks = agent.retrieve_chunks(question, plan)
-    print(chunks)
-    response = agent.draft_response(question, chunks, plan)
-    print(response)
-    exit(1)
-    embedding = embedder.embed([question])[0]
-    chunks: list[DocumentChunkDistant] = elastic_index.similarity_search(embedding, top_k)
+    response = agent.draft_response(question, chunks, plan, is_cli=is_cli)
+    return response
 
-    if len(chunks) != top_k:
-        logger.info(f"Getting help from TF-IDF for {top_k - len(chunks)}")
-        chunks.extend(tfidf_retriever.retrieve(question, top_k - len(chunks)))
-
-    user_prompt = _build_user_prompt(question, chunks)
-    _ = current_chat_client.chat([
-        {
-            "role": "system",
-            "content": [{"text": SYSTEM_PROMPT_SINGLE_RESPONSE_DESCRIBER}],
-        },
-        {
-            "role": "user",
-            "content": [{"text": user_prompt}]
-        }
-    ], stream=True)
+    # embedding = embedder.embed([question])[0]
+    # chunks: list[DocumentChunkDistant] = elastic_index.similarity_search(embedding, top_k)
+    #
+    # if len(chunks) != top_k:
+    #     logger.info(f"Getting help from TF-IDF for {top_k - len(chunks)}")
+    #     chunks.extend(tfidf_retriever.retrieve(question, top_k - len(chunks)))
+    #
+    # user_prompt = _build_user_prompt(question, chunks)
+    # _ = current_chat_client.chat([
+    #     {
+    #         "role": "system",
+    #         "content": [{"text": SYSTEM_PROMPT_SINGLE_RESPONSE_DESCRIBER}],
+    #     },
+    #     {
+    #         "role": "user",
+    #         "content": [{"text": user_prompt}]
+    #     }
+    # ], stream=True)

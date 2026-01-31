@@ -38,6 +38,10 @@ class LlmModel(Enum):
     OPENAI = "openai"
     OLLAMA = "ollama"
 
+    @classmethod
+    def has_value(cls, value):
+        return value in cls._value2member_map_
+
 
 DEFAULT_LLM_MODEL = LlmModel.OPENAI
 

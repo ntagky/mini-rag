@@ -182,3 +182,4 @@ cython_debug/
 /.tmp/
 /.idea
 /.logs/
+.DS_Store

@@ -83,11 +83,8 @@ Pick one value from this JSON based on the following question and return the cor
   "top_k": [1, 3, 5, 10, 20],
   "include_images": [true, false],
   "draft_style": ["concise", "detailed", "explain_reasoning"],
-  "citation_style": ["inline", "footnotes", "minimal", "full_trace"],
+  "citation_style": ["inline", "footnotes"],
   "fallback_threshold": [0.0, 0.1, 0.25, 0.5],
-  "summarize_before_answer": [true, false],
-  "chunk_prioritization": ["none", "most_recent", "document_type_priority"],
-  "evidence_highlighting": [true, false],
   "query_rewriting": [true, false],
   "confidence_tagging": [true, false]
 }
