@@ -77,6 +77,7 @@ export function ChatInterface() {
 
             setMessages((prev) => [...prev, assistantMessage]);
         } catch (error) {
+            console.error(error)
             const assistantMessage = {
                 id: (Date.now() + 1).toString(),
                 role: "assistant" as const,
@@ -104,7 +105,7 @@ export function ChatInterface() {
         {isEmpty ? (
             <div className="flex flex-col">
                 <Select value={selectedModel} onValueChange={setSelectedModel}>
-                    <SelectTrigger className="w-[180px] ms-auto">
+                    <SelectTrigger className="w-[180px] ms-auto mt-4">
                         <SelectValue placeholder="Select a model" />
                     </SelectTrigger>
                     <SelectContent>
@@ -118,11 +119,9 @@ export function ChatInterface() {
                 <PromptSuggestions
                     label="Looking for something?"
                     append={append}
-                    suggestions={["What is the capital of France?", "Tell me a joke"]}
+                    suggestions={["How to address the ethical limitations of placebo-controlled trials", "When can the appropriateness of trial be conducted?"]}
                 />
             </div>
-            
-            
         ) : null}
 
         {!isEmpty ? (

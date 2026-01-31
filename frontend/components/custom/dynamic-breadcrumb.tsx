@@ -21,7 +21,7 @@ export function DynamicBreadcrumb() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbPage>Playground</BreadcrumbPage>
+            <BreadcrumbPage>MiniRag</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -35,9 +35,12 @@ export function DynamicBreadcrumb() {
           const href = "/" + segments.slice(0, index + 1).join("/")
           const isLast = index === segments.length - 1
 
-          const title = decodeURIComponent(segment)
+          let title = decodeURIComponent(segment)
             .replace(/-/g, " ")
             .replace(/\b\w/g, l => l.toUpperCase())
+
+          if (title.length <= 3) 
+            title = title.toUpperCase();
 
           return (
             <div key={href} className="flex items-center">
