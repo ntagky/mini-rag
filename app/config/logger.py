@@ -4,6 +4,7 @@ import uuid
 import json
 import socket
 import logging
+from pathlib import Path
 from datetime import datetime
 from platform import platform, python_version
 from .configer import LOG_DIR
@@ -39,12 +40,11 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(log)
 
 
-def setup_logging(log_dir: str = LOG_DIR) -> None:
+def setup_logging(log_dir: Path = LOG_DIR) -> None:
     os.makedirs(log_dir, exist_ok=True)
 
     log_file = os.path.join(
-        log_dir,
-        f"rag_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
+        log_dir, f"rag_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
     )
 
     logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -56,9 +56,7 @@ def setup_logging(log_dir: str = LOG_DIR) -> None:
     # Console configuration
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(
-        logging.Formatter("%(message)s")
-    )
+    console_handler.setFormatter(logging.Formatter("%(message)s"))
 
     # File configuration - JSON
     file_handler = logging.FileHandler(log_file)

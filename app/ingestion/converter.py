@@ -1,20 +1,31 @@
 import base64
 from pathlib import Path
-from ..config.configer import SYSTEM_PROMPT_IMAGE_DESCRIBER, USER_PROMPT_IMAGE_DESCRIBER, TMP_DIR
+from ..config.configer import (
+    SYSTEM_PROMPT_IMAGE_DESCRIBER,
+    USER_PROMPT_IMAGE_DESCRIBER,
+    TMP_DIR,
+)
 from ..model.chat_client import ChatClient
 from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
 from docling.datamodel.base_models import InputFormat
 from docling.document_converter import DocumentConverter, PdfFormatOption
-from docling.datamodel.pipeline_options import (PdfPipelineOptions, TableStructureOptions)
+from docling.datamodel.pipeline_options import PdfPipelineOptions, TableStructureOptions
 from docling.datamodel.document import ConversionResult
-from docling_core.types.doc.document import PictureItem, DocItemLabel
+from docling_core.types.doc.document import PictureItem, DocItemLabel, TextItem
 from ..config.logger import get_logger
 
 logger = get_logger("mini-rag." + __name__)
 
 
 class PdfToMarkdownConverter:
-    def __init__(self, markdown_dir: Path, chat_client: ChatClient, ocr_langs=("eng",), num_threads=4, device=AcceleratorDevice.AUTO):
+    def __init__(
+        self,
+        markdown_dir: Path,
+        chat_client: ChatClient,
+        ocr_langs=("eng",),
+        num_threads=4,
+        device=AcceleratorDevice.AUTO,
+    ):
         self.markdown_dir = markdown_dir
         self.chat_client = chat_client
         self.converter = self._build_converter(ocr_langs, num_threads, device)
@@ -37,14 +48,14 @@ class PdfToMarkdownConverter:
 
         return DocumentConverter(
             format_options={
-                InputFormat.PDF: PdfFormatOption(
-                    pipeline_options=pipeline_options
-                )
+                InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
             }
         )
 
     def convert_files(self, files):
-        logger.debug(f"Starting markdown conversion of {len(files)} file{'s' if len(files) > 1 else ''}...")
+        logger.debug(
+            f"Starting markdown conversion of {len(files)} file{'s' if len(files) > 1 else ''}..."
+        )
         results = list(self.converter.convert_all(files))
 
         for result in results:
@@ -53,7 +64,7 @@ class PdfToMarkdownConverter:
         return [result.document for result in results]
 
     def convert_file(self, files):
-        logger.debug(f"Starting conversion of 1 file...")
+        logger.debug("Starting conversion of 1 file...")
         result = self.converter.convert(files)
         self._replace_images(result)
         self._handle_result(result)
@@ -61,38 +72,45 @@ class PdfToMarkdownConverter:
 
     def _replace_images(self, result: ConversionResult):
         if result.status == "success":
-            replacements = []
+            replacements: list[tuple[PictureItem, TextItem]] = []
             for item, _ in result.document.iterate_items():
                 if isinstance(item, PictureItem):
                     # Get image and prompt it to LLM
                     picture_uri = str(item.image.uri)
                     if picture_uri.startswith("data:image/png;base64,"):
-                        element_image_filename = (TMP_DIR / f"{result.document.origin.filename}-image-{len(replacements) + 1}.png")
+                        element_image_filename = (
+                            TMP_DIR
+                            / f"{result.document.origin.filename}-image-{len(replacements) + 1}.png"
+                        )
                         data = picture_uri.split(",")[1]
                         decoded_bytes = base64.b64decode(data)
                         with open(element_image_filename, "wb") as f:
                             logger.debug(f"Saved image at: {element_image_filename}")
                             f.write(decoded_bytes)
 
-                        response = self.chat_client.chat([
-                            {
-                                "role": "system",
-                                "content": [{"text": SYSTEM_PROMPT_IMAGE_DESCRIBER}],
-                            },
-                            {
-                                "role": "user",
-                                "content": [
-                                    {"text": USER_PROMPT_IMAGE_DESCRIBER},
-                                    {"image": picture_uri},
-                                ],
-                            }
-                        ])
+                        response = self.chat_client.chat(
+                            [
+                                {
+                                    "role": "system",
+                                    "content": [
+                                        {"text": SYSTEM_PROMPT_IMAGE_DESCRIBER}
+                                    ],
+                                },
+                                {
+                                    "role": "user",
+                                    "content": [
+                                        {"text": USER_PROMPT_IMAGE_DESCRIBER},
+                                        {"image": picture_uri},
+                                    ],
+                                },
+                            ]
+                        )
 
                         new_text = result.document.add_text(
                             label=DocItemLabel.TEXT,
                             orig=response,
                             text=response,
-                            prov=item.prov[0]
+                            prov=item.prov[0],
                         )
                         replacements.append((item, new_text))
 

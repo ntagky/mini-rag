@@ -39,7 +39,7 @@ export function DynamicBreadcrumb() {
             .replace(/-/g, " ")
             .replace(/\b\w/g, l => l.toUpperCase())
 
-          if (title.length <= 3) 
+          if (title.length <= 3)
             title = title.toUpperCase();
 
           return (

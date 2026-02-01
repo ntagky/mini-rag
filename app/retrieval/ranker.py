@@ -11,8 +11,8 @@ from .indexer import DocumentChunk, DocumentChunkDistant
 
 
 class TfidfRank:
-    def __init__(self, base_path: str = TFIDF_DIR):
-        self.base_path = Path(base_path)
+    def __init__(self, base_path: Path = TFIDF_DIR):
+        self.base_path = base_path
         self.base_path.mkdir(parents=True, exist_ok=True)
 
         self.vectorizer_path = self.base_path / "vectorizer.joblib"
@@ -40,11 +40,15 @@ class TfidfRank:
         save_npz(self.matrix_path, self.matrix)
 
         with open(self.chunks_path, "w", encoding="utf-8") as f:
-            json.dump([{
-                "id": c.id,
-                "text": c.text,
-                "metadata": c.metadata.to_dict()
-            } for c in chunks], f, ensure_ascii=False, indent=4)
+            json.dump(
+                [
+                    {"id": c.id, "text": c.text, "metadata": c.metadata.to_dict()}
+                    for c in chunks
+                ],
+                f,
+                ensure_ascii=False,
+                indent=4,
+            )
 
     def exists(self) -> bool:
         return (
@@ -55,13 +59,13 @@ class TfidfRank:
 
 
 class TfidfRetriever:
-    def __init__(self, base_path: str = TFIDF_DIR):
-        base = Path(base_path)
+    def __init__(self, base_path: Path = TFIDF_DIR):
+        self.base = base_path
 
-        self.vectorizer = joblib.load(base / "vectorizer.joblib")
-        self.matrix = load_npz(base / "matrix.npz")
+        self.vectorizer = joblib.load(self.base / "vectorizer.joblib")
+        self.matrix = load_npz(self.base / "matrix.npz")
 
-        with open(base / "chunks.json", encoding="utf-8") as f:
+        with open(self.base / "chunks.json", encoding="utf-8") as f:
             self.chunks: List[Dict] = json.load(f)
 
     def retrieve(self, query: str, top_k: int = 5) -> List[DocumentChunkDistant]:
@@ -80,7 +84,7 @@ class TfidfRetriever:
                     embedding=[],
                     metadata=chunk["metadata"],
                     score=float(scores[idx]),
-                    source="TF-IDF"
+                    source="TF-IDF",
                 )
             )
 

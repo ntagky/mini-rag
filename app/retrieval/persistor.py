@@ -25,8 +25,8 @@ class File(BaseModel):
 
 
 class SqliteDb:
-    def __init__(self, path: str = SQLITE_DIR, name: str = "default"):
-        self.path = Path(path)
+    def __init__(self, path: Path = SQLITE_DIR, name: str = "default"):
+        self.path = path
         self.path.mkdir(parents=True, exist_ok=True)
         self.db_path = SQLITE_DIR / name
         self._init_db(name)
@@ -35,7 +35,9 @@ class SqliteDb:
         return sqlite3.connect(self.db_path)
 
     def _init_db(self, db_name: str):
-        logger.debug(f"[SQLiteDB] {'Loaded existing' if self.db_path.exists() else 'Created new'} db '{db_name}'")
+        logger.debug(
+            f"[SQLiteDB] {'Loaded existing' if self.db_path.exists() else 'Created new'} db '{db_name}'"
+        )
         with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS ingested_files (
@@ -49,34 +51,29 @@ class SqliteDb:
                 )
             """)
 
-    def _table_exists(conn, table_name: str) -> bool:
-        cursor = conn.execute(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
-            (table_name,)
-        )
-        return cursor.fetchone() is not None
-
     def create_file(self, file: File):
         with self._connect() as conn:
-            conn.execute("""
+            conn.execute(
+                """
                 INSERT INTO ingested_files (
                     id, filename, path, hash,
                     page_count, chunk_count
                 ) VALUES (?, ?, ?, ?, ?, ?)
-            """, (
-                str(file.id),
-                file.filename,
-                file.path,
-                file.hash,
-                file.page_count,
-                file.chunk_count
-            ))
+            """,
+                (
+                    str(file.id),
+                    file.filename,
+                    file.path,
+                    file.hash,
+                    file.page_count,
+                    file.chunk_count,
+                ),
+            )
 
     def file_exists_by_hash(self, hash: str) -> bool:
         with self._connect() as conn:
             cursor = conn.execute(
-                "SELECT 1 FROM ingested_files WHERE hash = ?",
-                (hash,)
+                "SELECT 1 FROM ingested_files WHERE hash = ?", (hash,)
             )
             return cursor.fetchone() is not None
 
@@ -113,4 +110,4 @@ class SqliteDb:
     def reset(self):
         with self._connect() as conn:
             conn.execute("DELETE FROM ingested_files;")
-            logger.debug(f"Deleted all items from SQL db.")
+            logger.debug("Deleted all items from SQL db.")

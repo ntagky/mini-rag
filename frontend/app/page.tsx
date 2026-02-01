@@ -4,7 +4,7 @@ import { Globe, Share2Icon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Calendar } from "@/components/ui/calendar"
 import { BentoCard, BentoGrid } from "@/components/ui/bento-grid"
-import { Marquee } from "@/components/ui/marquee" 
+import { Marquee } from "@/components/ui/marquee"
 import { AnimatedBeamMultipleOutput } from "@/components/custom/animated-beam-multiple-outputs"
 import { WorldMap } from "@/components/custom/world-map"
 
@@ -34,7 +34,7 @@ const files = [
 const features = [
   {
     Icon: FileTextIcon,
-    name: "Knowledge ingestion",
+    name: "Knowledge Ingestion",
     description: "Where files become intelligent context.",
     href: "#",
     cta: "Learn more",

@@ -69,7 +69,7 @@ export function NavMain({
                         {item.items?.map((subItem) => (
                             <SidebarMenuSubItem key={subItem.title}>
                             <SidebarMenuSubButton asChild>
-                              <Link href={subItem.url}> 
+                              <Link href={subItem.url}>
                                 <span>{subItem.title}</span>
                               </Link>
                             </SidebarMenuSubButton>
@@ -94,7 +94,7 @@ export function NavMain({
       <Separator className="my-4"/>
       <SidebarGroupLabel >History</SidebarGroupLabel>
       <SidebarMenu>
-        {chats.map((item) => ( 
+        {chats.map((item) => (
           <SidebarMenuItem key={item.name}>
             <SidebarMenuButton asChild>
               <a href={item.url}>

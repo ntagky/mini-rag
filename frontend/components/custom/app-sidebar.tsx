@@ -138,7 +138,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={data.navMain} chats={data.chats}/>
       </SidebarContent>
       <SidebarFooter>
-        <Button variant={"destructive"}>Challenge MiniRag 😏️</Button>
+        <Link href={"/playground"} className="w-full p-1">
+          <Button variant={"destructive"} className="w-full">Challenge MiniRag 😏️</Button>
+        </Link>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

@@ -7,14 +7,14 @@ export default function CliPage() {
         <div className="flex-1 flex flex-col items-start p-2 pt-4 gap-4">
             <div className="flex flex-row items-center">
                 <h2 className="text-xl font-semibold tracking-tight">
-                    MiniRag is also available via <span className="font-bold">CLI</span>. Download it via 
+                    MiniRag is also available via <span className="font-bold">CLI</span>. Download it via
                 </h2>
-                <ConfettiButton className="ms-1 text-xl font-semibold">
+                <ConfettiButton className="ms-1 text-xl font-semibold" style={{paddingLeft: "4px", paddingRight: "4px"}}>
                     <SquareTerminal></SquareTerminal>
                     pip
                 </ConfettiButton>
             </div>
-            
+
             <Terminal className="flex-1">
                 <TypingAnimation>$ python main.py cli</TypingAnimation>
                 <AnimatedSpan className="text-green-500">
@@ -42,6 +42,7 @@ export default function CliPage() {
                 <TypingAnimation>&gt; Commands:</TypingAnimation>
                 <TypingAnimation>&gt; &#9; ingest [--reset] → scan and ingest corpus</TypingAnimation>
                 <TypingAnimation>&gt; &#9; query &lt;your question&gt; [--top-k N] [--model openai|ollama] → ask a question over corpus</TypingAnimation>
+                <TypingAnimation>&gt; &#9; chat [--model openai|ollama] → initialize a conversation and chat with history</TypingAnimation>
                 <TypingAnimation>&gt; &#9; exit → quit session</TypingAnimation>
                 <TypingAnimation> </TypingAnimation>
                 <TypingAnimation className="text-red-500">&gt; query What happens when a patient develop tolerance to a drug? --top-k 5 --model openai</TypingAnimation>
@@ -50,6 +51,6 @@ export default function CliPage() {
                 <TypingAnimation>&gt; _</TypingAnimation>
             </Terminal>
         </div>
-            
+
     )
 }

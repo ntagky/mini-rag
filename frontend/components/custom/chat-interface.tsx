@@ -60,14 +60,14 @@ export function ChatInterface() {
         };
 
         const updatedHistory = [...messages, { ...userMessage, id: Date.now().toString() }];
-        
+
         setMessages(updatedHistory as MessageWithId[]);
         setInput("");
         setIsLoading(true);
 
         try {
             const historyForBackend = updatedHistory.map(({ role, content, createdAt, citations }) => ({ role, content, createdAt, citations }));
-            
+
             const response = await sendChatQuery(historyForBackend, selectedModel);
             const responseWithoutCitation = response.content.replace(/cite=\[.*?\]/g, "").replace(/\s{2,}/g, " ").trim();
 
@@ -134,7 +134,7 @@ export function ChatInterface() {
                 <MessageList messages={messages} isTyping={isTyping}/>
             </ChatMessages>
         ) : null}
-            
+
         <ChatForm
             className="mt-auto"
             isPending={isLoading}

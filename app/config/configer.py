@@ -12,7 +12,7 @@ WELCOMING_MESSAGE_LOGO = text if text else APP_NAME
 
 # STORAGE ATTRIBUTES
 BASE_DIR = Path(__file__).resolve().parent.parent
-CORPUS_DIR = Path("data/corpus/unprocessed")
+CORPUS_DIR = Path("data/corpus/singular")
 MARKDOWN_DIR = Path("data/markdowns")
 TMP_DIR = Path(".tmp")
 LOG_DIR = Path(".logs")
@@ -22,11 +22,11 @@ SQLITE_DIR = Path(".db/sqlite")
 TFIDF_DIR = Path(".db/tfidf")
 
 # MODELS
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OLLAMA_BASE_URL = "http://localhost:11434"
-SENTENCE_TRANSFORMER_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+SENTENCE_TRANSFORMER_MODEL_NAME = "BAAI/bge-base-en-v1.5"
 SENTENCE_TRANSFORMER_DIMENSIONS = 384
-OFFLINE_SENTENCE_TRANSFORMER_MODEL_LOCAL_PATH = ".models/sentence-transformers/all-MiniLM-L6-v2"
+OFFLINE_SENTENCE_TRANSFORMER_MODEL_LOCAL_PATH = ".models/BAAI/bge-base-en-v1.5"
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
 OPENAI_EMBEDDING_DIMENSIONS = 512
 OPENAI_COMPLETION_MODEL = "gpt-4.1-mini"
@@ -60,14 +60,14 @@ If the answer is not in the context, ask the user for the specific information o
 Rules:
 - No introductions
 - No explanations outside the answer
-- Always include file citations, using only this format: cite=[filename1, filename2].
+- Always include file citations, using only this format: cite=[filename+3,4 | filename+66,99].
 - Be concise and factual
 """
 
 SYSTEM_PROMPT_PLANNER = """
-You are a reasoning agent planner for a RAG system. 
-Your job is to generate a JSON object containing all the configurable plan options for answering a user's question. 
-Do not add explanations, text, or comments. 
+You are a reasoning agent planner for a RAG system.
+Your job is to generate a JSON object containing all the configurable plan options for answering a user's question.
+Do not add explanations, text, or comments.
 Only output valid JSON.
 """
 
@@ -84,15 +84,15 @@ Rules:
 """
 
 USER_PROMPT_PLANNER = """
-Generate a JSON object containing all available plan options for a RAG agent. 
-Each option should have one of possible values shown below - except keywords which you should generate. 
-Only output JSON. 
+Generate a JSON object containing all available plan options for a RAG agent.
+Each option should have one of possible values shown below - except keywords which you should generate.
+Only output JSON.
 Do not include explanations, descriptions, or any text outside the JSON.
 
 In case that the following question expresses greeting, gratitude or it is a capability question,
 answer accordingly filling out your answer in the "quick_answer" field. Otherwise, leave that field empty.
 
-Set "query_rewriting" to true when the question is an actual search question and broad, ambiguous, or depends on prior 
+Set "query_rewriting" to true when the question is an actual search question and broad, ambiguous, or depends on prior
 context such that a single self-contained embedding query would perform better.
 
 Set up to 3 string keywords in "keyword" field for later analytic purposes.
@@ -110,7 +110,7 @@ Pick one value from this JSON based on the following question and return the cor
 }
 Do not include trailing commas or extra newlines.
 
-Question: 
+Question:
 """
 
 # RETRIEVAL STRATEGY

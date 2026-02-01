@@ -43,6 +43,6 @@ export function WorldMap() {
             <DottedMap markers={markers} />
         </div>
     </div>
-    
+
   )
 }

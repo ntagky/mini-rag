@@ -3,7 +3,10 @@ from typing import List
 from abc import ABC, abstractmethod
 from sentence_transformers import SentenceTransformer
 from ..model.chat_client import OpenAILLM
-from ..config.configer import OFFLINE_SENTENCE_TRANSFORMER_MODEL_LOCAL_PATH, OPENAI_EMBEDDING_MODEL
+from ..config.configer import (
+    OFFLINE_SENTENCE_TRANSFORMER_MODEL_LOCAL_PATH,
+    OPENAI_EMBEDDING_MODEL,
+)
 
 
 class EmbedderModel(Enum):
@@ -21,11 +24,13 @@ class BaseEmbedder(ABC):
 
 
 class Embedder:
+    embedder: BaseEmbedder
+
     def __init__(self, model: EmbedderModel):
         if model == EmbedderModel.OPENAI:
-            self.embedder: BaseEmbedder = OpenAIEmbedder()
+            self.embedder = OpenAIEmbedder()
         else:
-            self.embedder: BaseEmbedder = OfflineEmbedder()
+            self.embedder = OfflineEmbedder()
 
     def embed(self, texts: list[str]) -> List[List[float]]:
         return self.embedder.embed(texts)

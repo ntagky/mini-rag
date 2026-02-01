@@ -1,17 +1,25 @@
 import ollama
 from enum import Enum
 from openai import OpenAI
-from typing import List, Union
+from typing import List, Union, NotRequired
 from abc import ABC, abstractmethod
-from typing import Literal
+from typing import Literal, cast
 from typing_extensions import TypedDict
 from dataclasses import dataclass
 from openai.types.chat import (
-    ChatCompletionUserMessageParam, ChatCompletionSystemMessageParam, ChatCompletionAssistantMessageParam
+    ChatCompletionUserMessageParam,
+    ChatCompletionSystemMessageParam,
+    ChatCompletionAssistantMessageParam,
+    ChatCompletionContentPartImageParam,
 )
 from ..config.logger import get_logger
 from ..config.configer import (
-    OLLAMA_BASE_URL, OPENAI_API_KEY, OPENAI_EMBEDDING_MODEL, OPENAI_COMPLETION_MODEL, OLLAMA_CHAT_MODEL, OPENAI_EMBEDDING_DIMENSIONS
+    OLLAMA_BASE_URL,
+    OPENAI_API_KEY,
+    OPENAI_EMBEDDING_MODEL,
+    OPENAI_COMPLETION_MODEL,
+    OLLAMA_CHAT_MODEL,
+    OPENAI_EMBEDDING_DIMENSIONS,
 )
 
 logger = get_logger("mini-rag." + __name__)
@@ -26,7 +34,14 @@ OpenAIMessage = Union[
 @dataclass
 class ChatContent(TypedDict, total=False):
     text: str
-    image: bytes
+    image: str
+
+
+@dataclass
+class OllamaMessage(TypedDict):
+    role: str
+    content: str
+    images: NotRequired[List[str]]
 
 
 @dataclass
@@ -58,16 +73,18 @@ class BaseLLM(ABC):
 
 
 class ChatClient:
+    llm_model: BaseLLM
+
     def __init__(self, model: LlmModel, temperature: float = 0.0):
         if model == LlmModel.OPENAI:
-            self.llm: BaseLLM = OpenAILLM(temperature=temperature)
+            self.llm_model = OpenAILLM(temperature=temperature)
         else:
-            self.llm: BaseLLM = OllamaLLM(temperature=temperature)
+            self.llm_model = OllamaLLM(temperature=temperature)
 
     def chat(self, messages: List[ChatMessage], stream: bool = False) -> str:
         if stream:
-            return self.llm.chat_streaming(messages)
-        return self.llm.chat(messages)
+            return self.llm_model.chat_streaming(messages)
+        return self.llm_model.chat(messages)
 
 
 class OllamaLLM(BaseLLM):
@@ -84,7 +101,7 @@ class OllamaLLM(BaseLLM):
             messages=messages,
             options={
                 "temperature": self.temperature,
-            }
+            },
         )
 
         return response["message"]["content"]
@@ -116,7 +133,7 @@ class OllamaLLM(BaseLLM):
 
     @staticmethod
     def _to_ollama_messages(messages: list[ChatMessage]):
-        ollama_messages = []
+        ollama_messages: list[OllamaMessage] = []
 
         for msg in messages:
             text_parts = []
@@ -128,7 +145,7 @@ class OllamaLLM(BaseLLM):
                 elif "image" in item:
                     images.append(item["image"])
 
-            ollama_msg = {
+            ollama_msg: OllamaMessage = {
                 "role": msg["role"],
                 "content": "\n".join(text_parts) if text_parts else "",
             }
@@ -152,11 +169,11 @@ class OpenAILLM(BaseLLM):
         openai_messages = self._to_openai_messages(messages)
 
         response = self.client.chat.completions.create(
-            model=self.model,
-            messages=openai_messages,
-            max_tokens=4096
+            model=self.model, messages=openai_messages, max_tokens=4096
         )
 
+        # print(response.choices[0].message)
+        # print(response.usage)
         return response.choices[0].message.content
 
     def chat_streaming(self, messages: List[ChatMessage]) -> str:
@@ -167,9 +184,7 @@ class OpenAILLM(BaseLLM):
             messages=openai_messages,
             max_tokens=4096,
             stream=True,
-            stream_options={
-                "include_usage": True
-            }
+            stream_options={"include_usage": True},
         )
 
         full_response = []
@@ -198,19 +213,26 @@ class OpenAILLM(BaseLLM):
                     # Text block
                     content_list.append({"type": "text", "text": item["text"]})
                 elif "image" in item:
-                    content_list.append({"type": "image_url", "image_url": {"url": item["image"]}})
+                    bytes_url: str = item["image"]
+                    content_list.append(
+                        cast(
+                            ChatCompletionContentPartImageParam,
+                            {"type": "image_url", "image_url": {"url": bytes_url}},
+                        )
+                    )
 
             # Only add message if there is content
             if content_list:
-                converted.append({
-                    "role": msg["role"],
-                    "content": content_list
-                })
+                converted.append({"role": msg["role"], "content": content_list})
 
         return converted
 
     def embed(self, texts: list[str]):
-        response = self.client.embeddings.create(input=texts, model=OPENAI_EMBEDDING_MODEL, dimensions=OPENAI_EMBEDDING_DIMENSIONS)
+        response = self.client.embeddings.create(
+            input=texts,
+            model=OPENAI_EMBEDDING_MODEL,
+            dimensions=OPENAI_EMBEDDING_DIMENSIONS,
+        )
         arr = [data.embedding for data in response.data]
         return arr
 
@@ -218,10 +240,5 @@ class OpenAILLM(BaseLLM):
 def _log_response(model: str, response: str):
     logger.debug(
         f"{model} completed response",
-        extra={
-            "extra": {
-                "event": "llm_response",
-                "response": response
-            }
-        }
+        extra={"extra": {"event": "llm_response", "response": response}},
     )
