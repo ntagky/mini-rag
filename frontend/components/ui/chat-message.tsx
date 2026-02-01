@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/collapsible"
 import { FilePreview } from "@/components/ui/file-preview"
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
+import CitationBadges from "../custom/citation-badges"
 
 const chatBubbleVariants = cva(
   "group/message relative break-words rounded-lg p-3 text-sm sm:max-w-[70%]",
@@ -98,12 +99,6 @@ interface TextPart {
   text: string
 }
 
-// For compatibility with AI SDK types, not used
-interface SourcePart {
-  type: "source"
-  source?: any
-}
-
 interface FilePart {
   type: "file"
   mimeType: string
@@ -118,7 +113,6 @@ type MessagePart =
   | TextPart
   | ReasoningPart
   | ToolInvocationPart
-  | SourcePart
   | FilePart
   | StepStartPart
 
@@ -127,6 +121,7 @@ export interface Message {
   role: "user" | "assistant" | (string & {})
   content: string
   createdAt?: Date
+  citations: string[]
   experimental_attachments?: Attachment[]
   toolInvocations?: ToolInvocation[]
   parts?: MessagePart[]
@@ -142,6 +137,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   role,
   content,
   createdAt,
+  citations,
   showTimeStamp = false,
   animation = "scale",
   actions,
@@ -261,15 +257,18 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
       </div>
 
       {showTimeStamp && createdAt ? (
-        <time
-          dateTime={createdAt.toISOString()}
-          className={cn(
-            "mt-1 block px-1 text-xs opacity-50",
-            animation !== "none" && "duration-500 animate-in fade-in-0"
-          )}
-        >
-          {formattedTime}
-        </time>
+        <div className={cn("flex flex-row mt-2 gap-2 text-xs items-center", citations.length == 0  && "mt-1")}>
+          <time
+            dateTime={createdAt.toISOString()}
+            className={cn(
+              "px-1 opacity-50",
+              animation !== "none" && "duration-500 animate-in fade-in-0"
+            )}
+          >
+            {formattedTime}
+          </time>
+          <CitationBadges citations={citations}/>
+        </div>
       ) : null}
     </div>
   )

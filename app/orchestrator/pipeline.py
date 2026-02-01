@@ -85,10 +85,10 @@ def post_query(question: str, messages: list[ChatMessage], top_k: int, model: Ll
     agent = RAGAgent(embedder, elastic_index, tfidf_retriever, current_chat_client)
     plan = agent.generate_plan(question, top_k)
     if "quick_answer" in plan and plan["quick_answer"]:
-        return plan["quick_answer"]
+        return plan["quick_answer"], []
     if "query_rewriting" in plan and plan["query_rewriting"]:
         question = agent.rewrite_question(messages[:-6:-2])
     chunks = agent.retrieve_chunks(question, plan)
     last_messages = messages[-6:]
-    response = agent.draft_response(last_messages, question, chunks, plan, is_cli=is_cli)
-    return response
+    response, citations = agent.draft_response(last_messages, question, chunks, plan, is_cli=is_cli)
+    return response, citations

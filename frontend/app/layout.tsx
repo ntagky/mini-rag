@@ -31,13 +31,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark" style={{"colorScheme": "dark"} as React.CSSProperties}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
         >
@@ -55,6 +55,7 @@ export default function RootLayout({
                     <DynamicBreadcrumb></DynamicBreadcrumb>
                   </div>
                   <div className="flex gap-4 items-center">
+                    <p>ntagkonikos @ pfizer</p>
                     <Link href={"https://www.linkedin.com/in/alexandros-ntagkonikos/"} target="_blank">
                       <Icons.linkedin className="size-5" />
                     </Link>

@@ -22,6 +22,7 @@ import {
 import Link from "next/link"
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu"
 import { DropdownMenuContent } from "@radix-ui/react-dropdown-menu"
+import { Separator } from "../ui/separator"
 
 export function NavMain({
   items, chats
@@ -90,7 +91,8 @@ export function NavMain({
           </Collapsible>
         ))}
       </SidebarMenu>
-      <SidebarGroupLabel className="mt-4">History</SidebarGroupLabel>
+      <Separator className="my-4"/>
+      <SidebarGroupLabel >History</SidebarGroupLabel>
       <SidebarMenu>
         {chats.map((item) => ( 
           <SidebarMenuItem key={item.name}>

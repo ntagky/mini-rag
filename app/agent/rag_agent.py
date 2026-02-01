@@ -1,3 +1,4 @@
+import re
 import json
 from ..model.chat_client import ChatClient, ChatMessage
 from ..retrieval.embedder import Embedder
@@ -81,7 +82,7 @@ class RAGAgent:
             chunks.extend(fallback_chunks)
         return chunks
 
-    def draft_response(self, messages: list[ChatMessage], question: str, chunks: list, plan: dict, is_cli: False) -> str:
+    def draft_response(self, messages: list[ChatMessage], question: str, chunks: list, plan: dict, is_cli: False) -> (str, set):
         """
         Returns the generated answer text from LLM.
         """
@@ -97,22 +98,8 @@ class RAGAgent:
             }
         ])
         response = self.chat_client.chat(messages, stream=is_cli)
-        return response
-
-    # ----------------
-    # Step 4: Cite
-    # ----------------
-    def attach_citations(self, response_text: str, chunks: list, plan: dict) -> str:
-        """
-        Returns the final text with citations according to plan["citation_style"].
-        """
-        if plan["citation_style"] == "inline":
-            cited = ""
-            for i, chunk in enumerate(chunks):
-                cited += f"{response_text}\n[{chunk.metadata.document_id}, chunk {chunk.metadata.chunk_index}]"
-            return cited
-        # other citation styles...
-        return response_text
+        citations = self._extract_citations(response)
+        return response, citations
 
     @staticmethod
     def _build_user_prompt(question: str, chunks: list, plan: dict) -> str:
@@ -120,15 +107,14 @@ class RAGAgent:
         for chunk in chunks:
             metadata = chunk.metadata
             context_blocks.append(
-                f"[file:{metadata.document_id} | chunk_index:{metadata.chunk_index} | "
+                f"[file:{metadata.document_id} | "  # | chunk_index:{metadata.chunk_index} | "
                 f"score:{chunk.score} ({chunk.source})]\n"
                 f"{chunk.text}"
             )
         context = "\n\n---\n\n".join(context_blocks)
 
-        plan = f"Provide an answer based on this plan: {plan}"
-
-        prompt = f"Context:\n{context}\n\nQuestion:\n{question}"
+        plan = f"[draft_style: {plan['draft_style']}]"
+        prompt = f"Styles:\n{plan}\n\nContext:\n{context}\n\nQuestion:\n{question}"
         print(prompt)
         return prompt
 
@@ -153,3 +139,15 @@ class RAGAgent:
 
         except json.JSONDecodeError as e:
             raise ValueError(f"Failed to parse plan options JSON: {e}\nResponse: {response_text}")
+
+    @staticmethod
+    def _extract_citations(response) -> set:
+        matches = re.findall(r"cite=\[(.*?)]", response)
+
+        # Split each match by comma (in case there are multiple files per cite) and strip whitespace
+        cited_files = set()
+        for m in matches:
+            files = [f.strip() for f in m.split(',')]
+            cited_files.update(files)
+
+        return cited_files

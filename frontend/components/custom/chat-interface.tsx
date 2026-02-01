@@ -11,7 +11,7 @@ import { Message, MessageWithId } from "@/lib/dataclasses"
 
 
 export function ChatInterface() {
-    const [messages, setMessages] = useState<MessageWithId[]>([]) //[{"id": "dadw", "role": "user", "content": "Adwad"}]
+    const [messages, setMessages] = useState<MessageWithId[]>([])
     const [input, setInput] = useState("")
     const [isLoading, setIsLoading] = useState(false)
     const [models, setModels] = useState<string[]>([]);
@@ -25,7 +25,6 @@ export function ChatInterface() {
                 const parsedModels = JSON.parse(cached);
                 setModels(parsedModels);
                 if (parsedModels.length > 0) {
-                    console.log("They were cached")
                     setSelectedModel(parsedModels[0]);
                     return;
                 };
@@ -56,6 +55,8 @@ export function ChatInterface() {
         const userMessage: Message = {
             role: "user",
             content: input,
+            createdAt: new Date(),
+            citations: []
         };
 
         const updatedHistory = [...messages, { ...userMessage, id: Date.now().toString() }];
@@ -65,14 +66,17 @@ export function ChatInterface() {
         setIsLoading(true);
 
         try {
-            const historyForBackend = updatedHistory.map(({ role, content }) => ({ role, content }));
+            const historyForBackend = updatedHistory.map(({ role, content, createdAt, citations }) => ({ role, content, createdAt, citations }));
             
-            const aiStringResponse = await sendChatQuery(historyForBackend, selectedModel);
+            const response = await sendChatQuery(historyForBackend, selectedModel);
+            const responseWithoutCitation = response.content.replace(/cite=\[.*?\]/g, "").replace(/\s{2,}/g, " ").trim();
 
             const assistantMessage = {
                 id: (Date.now() + 1).toString(),
                 role: "assistant" as const,
-                content: aiStringResponse,
+                content: responseWithoutCitation,
+                createdAt: new Date(),
+                citations: response.citations
             };
 
             setMessages((prev) => [...prev, assistantMessage]);
@@ -82,6 +86,8 @@ export function ChatInterface() {
                 id: (Date.now() + 1).toString(),
                 role: "assistant" as const,
                 content: "Something went wrong. Please refresh the page and try again!",
+                createdAt: new Date(),
+                citations: []
             };
 
             setMessages((prev) => [...prev, assistantMessage]);
@@ -91,8 +97,7 @@ export function ChatInterface() {
         }
     }
 
-    // 3. Helper for suggestions
-    const append = (message: Omit<Message, 'id'>) => {
+    const append = (message: Omit<Message, 'id' | 'createdAt' | 'citations'>) => {
         setInput(message.content)
         // You could also trigger handleSubmit(undefined) here if you want it to send immediately
     }
@@ -119,14 +124,14 @@ export function ChatInterface() {
                 <PromptSuggestions
                     label="Looking for something?"
                     append={append}
-                    suggestions={["How to address the ethical limitations of placebo-controlled trials", "When can the appropriateness of trial be conducted?"]}
+                    suggestions={["How to address the ethical limitations of placebo-controlled trials?", "When can the appropriateness of trial be conducted?"]}
                 />
             </div>
         ) : null}
 
         {!isEmpty ? (
             <ChatMessages messages={messages}>
-                <MessageList messages={messages} isTyping={isTyping} />
+                <MessageList messages={messages} isTyping={isTyping}/>
             </ChatMessages>
         ) : null}
             

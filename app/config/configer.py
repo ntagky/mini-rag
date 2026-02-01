@@ -60,7 +60,7 @@ If the answer is not in the context, ask the user for the specific information o
 Rules:
 - No introductions
 - No explanations outside the answer
-- Cite sources using [file:page:chunk_id]
+- Always include file citations, using only this format: cite=[filename1, filename2].
 - Be concise and factual
 """
 

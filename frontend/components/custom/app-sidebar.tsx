@@ -4,10 +4,10 @@ import * as React from "react"
 import {
   BookOpen,
   Bot,
+  Rocket,
   Settings2,
   SquareTerminal,
   Terminal,
-  Wallet,
 } from "lucide-react"
 
 import {
@@ -23,6 +23,7 @@ import {
 import { NavMain } from "./nav-main"
 import { DropdownMenu, DropdownMenuTrigger } from "@radix-ui/react-dropdown-menu"
 import { Button } from "../ui/button"
+import Link from "next/link"
 
 
 const data = {
@@ -114,18 +115,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
+                  <Link href={"/"}>
                     <SidebarMenuButton
-                    size="lg"
-                    className=""
-                    >
-                    <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                        <Wallet className="size-4" />
-                    </div>
-                    <div className="grid flex-1 text-left text-sm leading-tight">
-                        <span className="truncate font-medium">MiniRag</span>
-                        <span className="truncate text-xs">Mini, yet regorous</span>
-                    </div>
-                </SidebarMenuButton>
+                        size="lg"
+                        className=""
+                      >
+                        <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
+                            <Rocket className="size-4" />
+                        </div>
+                        <div className="grid flex-1 text-left text-sm leading-tight">
+                            <span className="truncate font-medium">MiniRag</span>
+                            <span className="truncate text-xs">Mini, yet regorous</span>
+                        </div>
+                    </SidebarMenuButton>
+                  </Link>
           </DropdownMenuTrigger>
         </DropdownMenu>
       </SidebarMenuItem>
