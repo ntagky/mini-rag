@@ -16,16 +16,10 @@ class ChunkMetadata:
     embedding_version: str = "v1"
 
     def to_dict(self) -> dict:
-        """
-        Convert to a Chroma-compatible metadata dict.
-        """
         return asdict(self)
 
     @staticmethod
     def from_dict(data: dict) -> "ChunkMetadata":
-        """
-        Reconstruct metadata from Chroma.
-        """
         return ChunkMetadata(**data)
 
 
@@ -45,9 +39,6 @@ class DocumentChunkDistant(DocumentChunk):
 
 class ElasticsearchIndex:
     def __init__(self, embedding_dim: int, index_name: str = "document_chunks"):
-        """
-        Initialize Elasticsearch client and create index if it doesn't exist.
-        """
         self.client = Elasticsearch("http://localhost:9200")
         self.index_name = index_name
         self.embedding_dim = embedding_dim
@@ -75,9 +66,6 @@ class ElasticsearchIndex:
         logger.debug(f"[ElasticDB] Created index '{self.index_name}'")
 
     def add_items(self, document_entries: List[DocumentChunk]):
-        """
-        Add DocumentChunk objects with their embeddings.
-        """
         for entry in document_entries:
             doc = {
                 "text": entry.text,
@@ -91,9 +79,6 @@ class ElasticsearchIndex:
     def similarity_search(
         self, query_embedding, top_k: int = 3, threshold: float = MIN_SCORE_THRESHOLD
     ) -> List[DocumentChunkDistant]:
-        """
-        Return top n DocumentChunk objects similar to query_embedding.
-        """
         query = {"field": "embedding", "query_vector": query_embedding, "k": top_k}
 
         res = self.client.search(index=self.index_name, knn=query)
@@ -120,25 +105,16 @@ class ElasticsearchIndex:
         return results
 
     def delete(self, ids: List[str]):
-        """
-        Delete documents by their IDs.
-        """
         for doc_id in ids:
             self.client.delete(index=self.index_name, id=doc_id, ignore=[404])
         logger.debug(f"[ElasticDB] Deleted {len(ids)} items")
 
     def reset(self):
-        """
-        Delete all documents by deleting and recreating the index.
-        """
         self.client.indices.delete(index=self.index_name, ignore=[400, 404])
         logger.debug(f"[ElasticDB] Reset index '{self.index_name}'")
         self.create_index()
 
     def retrieve_all(self) -> List[DocumentChunk]:
-        """
-        Retrieve all documents in the index as DocumentChunk objects.
-        """
         res = self.client.search(
             index=self.index_name, query={"match_all": {}}, size=1000
         )

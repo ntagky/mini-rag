@@ -8,11 +8,11 @@ A fully local Retrieval-Augmented Generation (RAG) application for ingesting doc
 
 - [Quick Start](#quick-start)
 - [Modes](#modes)
-- [Flow](#assumptions)
-- [Requests and Responses](#requests-and-responses)
-- [Stack](#stack)
+- [Requests & Responses](#requests-and-responses)
 - [Frontend](#frontend)
-
+- [Testing](#testing)
+- [Stack](#stack)
+- [Project Walkthrough](#project-walkthrough)
 ---
 
 ## Quick Start
@@ -365,24 +365,6 @@ curl -X 'POST' \
 }
 ```
 
-### Stack
-
-| Category               | Technology | Role                                                 |
-|:-----------------------| :--- |:-----------------------------------------------------|
-| **Orchestration**      | Docker Compose | Containerization & environment parity                |
-| **Search Engine**      | Elasticsearch 9.2.4 | Vector Database & similarity retrieval               |
-| **Database (Local)**   | SQLite | Lightweight relational storage for corpus management |
-| **Inference (Local)**  | Ollama (Llava:7b) | Multi-modal (Vision + Text) reasoning                    |
-| **Inference (Cloud)**  | OpenAI GPT-4o-mini | Multi-modal (Vision + Text) reasoning                   |
-| **Data Ingestion**     | Docling (IBM) | Advanced document parsing (PDF/DOCX to Markdown/JSON) |
-| **Embeddings (Local)** | BAAI/BGE-Base-En-v1.5 | High-performance local text vectorization via Sentence Transformers |
-| **Embeddings (Cloud)**        | text-embedding-3-small | Generating high-dimensional vector representations   |
-| **Backend**            | Python 3.11 | Agent logic, LangChain/LlamaIndex orchestration      |
-| **Frontend**           | Next.js | Modern web interface for the agent chat              |
-| **Legacy Search**      | TF-IDF | Basic keyword frequency analysis for comparison      |
-| **Hugg**               | Kibana 9.2.4 | Data visualization and index management              |
-| **Monitoring**         | Kibana 9.2.4 | Data visualization and index management              |
-
 ## Frontend
 
 The frontend is a modern Next.js application that serves as the primary user interface for the RAG system. It features a responsive chat interface where users can interact with the agent in real-time. A key feature is the model switcher, allowing users to toggle between OpenAI (GPT-4o-mini) for high-level reasoning and Ollama (Llava:7b) for local or vision-based tasks.
@@ -407,3 +389,44 @@ bun --bun run dev
 ![Frontend Homepage](.assets/screenshots/screenshot-frontend-homepage.png)
 ![Frontend Chat](.assets/screenshots/screenshot-frontend-chat.png)
 ![Frontend CLI](.assets/screenshots/screenshot-frontend-cli.png)
+
+## Testing
+I have implemented an end-to-end testing suite that validates the entire pipeline. The codebase currently maintains a test coverage of >70%.
+
+```bash
+pytest --cov=src tests/
+```
+
+To maintain code integrity, I use pre-commit hooks that automatically run ruff for linting and formatting, mypy for static type checking, and standard safety checks for file structure and size.
+
+```bash
+pre-commit run --all-files
+```
+
+![Test](.assets/screenshots/screenshot-tests.png)
+
+## Stack
+
+| Category               | Technology | Role                                                 |
+|:-----------------------| :--- |:-----------------------------------------------------|
+| **Orchestration**      | Docker Compose | Containerization & environment parity                |
+| **Search Engine**      | Elasticsearch 9.2.4 | Vector Database & similarity retrieval               |
+| **Database (Local)**   | SQLite | Lightweight relational storage for corpus management |
+| **Inference (Local)**  | Ollama (Llava:7b) | Multi-modal (Vision + Text) reasoning                    |
+| **Inference (Cloud)**  | OpenAI GPT-4o-mini | Multi-modal (Vision + Text) reasoning                   |
+| **Data Ingestion**     | Docling (IBM) | Advanced document parsing (PDF/DOCX to Markdown/JSON) |
+| **Embeddings (Local)** | BAAI/BGE-Base-En-v1.5 | High-performance local text vectorization via Sentence Transformers |
+| **Embeddings (Cloud)**        | text-embedding-3-small | Generating high-dimensional vector representations   |
+| **Backend**            | Python 3.11 | Agent logic, LangChain/LlamaIndex orchestration      |
+| **Frontend**           | Next.js | Modern web interface for the agent chat              |
+| **Legacy Search**      | TF-IDF | Basic keyword frequency analysis for comparison      |
+| **Hugg**               | Kibana 9.2.4 | Data visualization and index management              |
+| **Monitoring**         | Kibana 9.2.4 | Data visualization and index management              |
+
+
+---
+
+## Project Walkthrough
+For a live demonstration of the system in action, check out the video below:
+
+**[Demo on YouTube](https://youtu.be/k2qB9IycLc8)**

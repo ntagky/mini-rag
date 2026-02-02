@@ -113,9 +113,6 @@ class RAGAgent:
             )
 
     def _generate_plan(self, question: str, top_k: int) -> dict:
-        """
-        Returns a dict describing the plan.
-        """
         plan_json = self.chat_client.chat(
             [
                 {
@@ -151,10 +148,6 @@ class RAGAgent:
         return response
 
     def _retrieve_chunks(self, question: str, plan: dict) -> list:
-        """
-        Returns a list of chunks according to the plan.
-        Includes fallback logic if needed.
-        """
         embedding = self.embedder.embed([question])[0]
         chunks = self.retriever.similarity_search(
             embedding, top_k=plan["top_k"], threshold=plan["fallback_threshold"]
@@ -172,9 +165,6 @@ class RAGAgent:
     def _draft_response(
         self, messages: list[ChatMessage], question: str, chunks: list, plan: dict
     ) -> Tuple[str, Set]:
-        """
-        Returns the generated answer text from LLM.
-        """
         prompt = self._build_user_prompt(question, chunks, plan)
         messages.extend(
             [
@@ -207,9 +197,6 @@ class RAGAgent:
 
     @staticmethod
     def _parse_plan_options(response_text: str) -> dict:
-        """
-        Parses the LLM response containing JSON plan options into a Python dict.
-        """
         try:
             # Remove leading/trailing whitespace
             response_text = response_text.strip()
