@@ -1,0 +1,23 @@
+[project]
+name = "minirag"
+version = "0.1.0"
+readme = "README.md"
+authors = [
+  { name = "ntagky" },
+]
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.pytest]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = ["-v"]
+
+pythonpath = ["app"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true

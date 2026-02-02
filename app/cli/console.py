@@ -19,7 +19,7 @@ def runner():
     )
     logger.info("  exit → quit session")
 
-    orchestrator = Orchestrator().__int__()
+    orchestrator = Orchestrator()
 
     while True:
         try:
@@ -36,7 +36,7 @@ def runner():
                 logger.debug(
                     f"Ingesting corpus{' after erasing current data' if reset else ''}..."
                 )
-                orchestrator.ingest_corpus(reset=reset)
+                _ = orchestrator.ingest_corpus(reset=reset)
                 continue
 
             # Parse /query command
@@ -81,7 +81,6 @@ def runner():
                 )
                 orchestrator.post_query(
                     question=question,
-                    messages=[],
                     top_k=top_k,
                     model=model,
                     is_cli=True,
@@ -130,6 +129,7 @@ def runner():
                         response, _ = orchestrator.post_query(
                             question=question,
                             messages=messages,
+                            top_k=-1,
                             model=model,
                             is_cli=True,
                         )

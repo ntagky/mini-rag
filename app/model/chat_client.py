@@ -172,8 +172,8 @@ class OpenAILLM(BaseLLM):
             model=self.model, messages=openai_messages, max_tokens=4096
         )
 
-        # print(response.choices[0].message)
-        # print(response.usage)
+        print(response.choices[0].message)
+        print(response.usage)
         return response.choices[0].message.content
 
     def chat_streaming(self, messages: List[ChatMessage]) -> str:

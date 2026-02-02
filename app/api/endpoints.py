@@ -41,9 +41,7 @@ async def query(request: QueryRequest):
     )
     if len(request.messages) == 1:
         question = request.messages[0].content
-        response, citations = orchestrator.post_query(
-            question=question, messages=[], model=model
-        )
+        response, citations = orchestrator.post_query(question=question, model=model)
     else:
         messages = [
             ChatMessage(role=message.role, content=[ChatContent(text=message.content)])

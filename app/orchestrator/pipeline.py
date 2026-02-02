@@ -1,8 +1,8 @@
 import uuid
+from typing import List
 from pathlib import Path
-from ..utils.helpers import stream_print
 from ..config.configer import TMP_DIR, OPENAI_EMBEDDING_DIMENSIONS
-from ..agent.rag_agent import RAGAgent
+from ..agent.rag_agent import RAGAgent, AgentResult
 from ..ingestion.chunker import Chunker
 from ..ingestion.loader import CorpusLoader
 from ..retrieval.embedder import Embedder, EmbedderModel
@@ -23,19 +23,19 @@ logger = get_logger("mini-rag." + __name__)
 
 
 class Orchestrator:
-    def __int__(self):
-        self.chunker = Chunker()
-        self.embedder = Embedder(EmbedderModel.OPENAI)
-        self.elastic_index = ElasticsearchIndex(
-            embedding_dim=OPENAI_EMBEDDING_DIMENSIONS
-        )
-        self.sql_db = SqliteDb()
-        self.tfidf_rank = TfidfRank()
-        self.tfidf_retriever = TfidfRetriever()
-        self.chat_client = ChatClient(LlmModel.OPENAI)
-        self.loader = CorpusLoader(self.chat_client)
+    chunker = Chunker()
+    embedder = Embedder(EmbedderModel.OPENAI)
+    elastic_index = ElasticsearchIndex(embedding_dim=OPENAI_EMBEDDING_DIMENSIONS)
+    sql_db = SqliteDb()
+    tfidf_rank = TfidfRank()
+    tfidf_retriever = TfidfRetriever()
+    chat_client = {
+        LlmModel.OPENAI.value: ChatClient(LlmModel.OPENAI),
+        LlmModel.OLLAMA.value: ChatClient(LlmModel.OLLAMA),
+    }
+    loader = CorpusLoader(chat_client[LlmModel.OPENAI.value])
 
-    def ingest_corpus(self, reset: bool = False):
+    def ingest_corpus(self, reset: bool = False) -> int:
         if reset:
             self.elastic_index.reset()
             self.sql_db.reset()
@@ -88,39 +88,33 @@ class Orchestrator:
             # Recompute TF-IDF matrix
             chunked_data = self.elastic_index.retrieve_all()
             self.tfidf_rank.build(chunked_data)
+
+            return len(unprocessed)
         else:
             logger.info("Corpus files are up to date.")
+            return 0
 
     def post_query(
         self,
         question: str,
-        messages: list[ChatMessage],
+        messages: List[ChatMessage] = [],
         top_k: int = -1,
         model: LlmModel = DEFAULT_LLM_MODEL,
         is_cli: bool = False,
     ):
-        if model != DEFAULT_LLM_MODEL:
-            current_chat_client = ChatClient(model)
-        else:
-            current_chat_client = self.chat_client
-
+        # Create a message chain if its empty
         if len(messages) == 0:
             messages = [ChatMessage(role="user", content=[ChatContent(text=question)])]
 
+        # Setup agent with dependency injection and trigger it
         agent = RAGAgent(
-            self.embedder, self.elastic_index, self.tfidf_retriever, current_chat_client
+            self.embedder,
+            self.elastic_index,
+            self.tfidf_retriever,
+            self.chat_client[model.value],
+            is_cli,
         )
-        plan = agent.generate_plan(question, top_k)
-        if "quick_answer" in plan and plan["quick_answer"]:
-            if is_cli:
-                stream_print(plan["quick_answer"])
-            return plan["quick_answer"], []
-        if "query_rewriting" in plan and plan["query_rewriting"]:
-            question = agent.rewrite_question(messages[:-6:-2])
-        chunks = agent.retrieve_chunks(question, plan)
-        last_messages = messages[-6:]
-        response, citations = agent.draft_response(
-            last_messages, question, chunks, plan, is_cli=is_cli
-        )
-        print(citations)
-        return response, citations
+        result: AgentResult = agent.run(question, messages, top_k)
+        logger.info(result.to_json())
+
+        return result.answer, result.citations

@@ -1,6 +1,10 @@
 import re
+import uuid
 import json
-from typing import Tuple, Set
+import time
+from pydantic import BaseModel
+from typing import Tuple, Set, List, Any, Dict
+from ..utils.helpers import stream_print
 from ..model.chat_client import ChatClient, ChatMessage
 from ..retrieval.embedder import Embedder
 from ..retrieval.indexer import ElasticsearchIndex
@@ -13,6 +17,14 @@ from ..config.configer import (
 )
 
 
+class AgentResult(BaseModel):
+    citations: List[Any] = []
+    log: Dict
+
+    def to_json(self) -> str:
+        return self.model_dump_json(indent=2)
+
+
 class RAGAgent:
     def __init__(
         self,
@@ -20,13 +32,87 @@ class RAGAgent:
         retriever: ElasticsearchIndex,
         fallback_retriever: TfidfRetriever,
         chat_client: ChatClient,
+        is_cli: bool,
     ):
         self.embedder = embedder
         self.retriever = retriever
         self.fallback_retriever = fallback_retriever
         self.chat_client = chat_client
+        self.is_cli = is_cli
 
-    def generate_plan(self, question: str, top_k: int) -> dict:
+    def run(self, question: str, messages: List[ChatMessage], top_k) -> AgentResult:
+        state: Dict[str, Any] = {
+            "trace_id": str(uuid.uuid4()),
+            "question": question,
+            "steps": [],
+            "directions": {},
+            "retrieval": [],
+            "latency_ms": {},
+            "tokens": {},
+            "errors": [],
+        }
+
+        start_time = time.perf_counter()
+        try:
+            # Generate planning and directions
+            state["steps"].append("plan")
+            p_start = time.perf_counter()
+            state["directions"] = self._generate_plan(question, top_k)
+            state["latency_ms"]["plan"] = self._calc_ms(p_start)
+
+            # Check if model provided quick answer
+            if (
+                "quick_answer" in state["directions"]
+                and state["directions"]["quick_answer"]
+            ):
+                state["steps"].append("answer")
+                response = state["directions"]["quick_answer"]
+                state["answer"] = response
+                if self.is_cli:
+                    stream_print(response)
+                return AgentResult(answer=response, citations=[], log=state)
+            else:
+                # Check if model suggested a new query message for querying efficiency
+                if (
+                    "query_rewriting" in state["directions"]
+                    and state["directions"]["query_rewriting"]
+                ):
+                    state["steps"].append("rewriting")
+                    question = self._rewrite_question(messages[:-6:-2])
+
+                # Embed and retrieve close chunks
+                state["steps"].append("retrieve")
+                r_start = time.perf_counter()
+                chunks = self._retrieve_chunks(question, state["directions"])
+                state["retrieval"] = [
+                    f"source:{c.source}, score:{c.score}" for c in chunks
+                ]
+                state["latency_ms"]["retrieve"] = self._calc_ms(r_start)
+
+                # Provide latest messages and call model to draft the final response attached with citations
+                state["steps"].append("draft")
+                last_messages = messages[-6:]
+                d_start = time.perf_counter()
+                response, citations = self._draft_response(
+                    last_messages, question, chunks, state["directions"]
+                )
+                state["latency_ms"]["draft"] = self._calc_ms(d_start)
+                state["answer"] = response
+                state["citations"] = citations
+                state["latency_ms"]["total"] = self._calc_ms(start_time)
+                print(f"Returning state: {state}")
+                return AgentResult(answer=response, citations=citations, log=state)
+        except Exception as e:
+            state["errors"].append(str(e))
+            state["latency_ms"]["total"] = self._calc_ms(start_time)
+            print(f"Returning state from exception: {state}")
+            return AgentResult(
+                answer="I'm sorry, I ran into a technical glitch. Please try asking again in a moment.",
+                citations=[],
+                log=state,
+            )
+
+    def _generate_plan(self, question: str, top_k: int) -> dict:
         """
         Returns a dict describing the plan.
         """
@@ -39,14 +125,13 @@ class RAGAgent:
                 {"role": "user", "content": [{"text": USER_PROMPT_PLANNER + question}]},
             ]
         )
-        # print(plan_json)
         plan = self._parse_plan_options(plan_json)
         if "top_k" in plan and top_k > 0:
             plan["top_k"] = top_k
 
         return plan
 
-    def rewrite_question(self, messages: list[ChatMessage]):
+    def _rewrite_question(self, messages: list[ChatMessage]):
         question = (
             f"Current question:\n {messages[0].get('content')[0].get('text')}\n\n"
         )
@@ -66,7 +151,7 @@ class RAGAgent:
         # print(response)
         return response
 
-    def retrieve_chunks(self, question: str, plan: dict) -> list:
+    def _retrieve_chunks(self, question: str, plan: dict) -> list:
         """
         Returns a list of chunks according to the plan.
         Includes fallback logic if needed.
@@ -75,7 +160,6 @@ class RAGAgent:
         chunks = self.retriever.similarity_search(
             embedding, top_k=plan["top_k"], threshold=plan["fallback_threshold"]
         )
-        print(chunks)
         if (
             plan["retrieval_strategy"].endswith("tfidf_fallback")
             and len(chunks) < plan["top_k"]
@@ -86,13 +170,8 @@ class RAGAgent:
             chunks.extend(fallback_chunks)
         return chunks
 
-    def draft_response(
-        self,
-        messages: list[ChatMessage],
-        question: str,
-        chunks: list,
-        plan: dict,
-        is_cli: bool = False,
+    def _draft_response(
+        self, messages: list[ChatMessage], question: str, chunks: list, plan: dict
     ) -> Tuple[str, Set]:
         """
         Returns the generated answer text from LLM.
@@ -107,7 +186,7 @@ class RAGAgent:
                 {"role": "user", "content": [{"text": prompt}]},
             ]
         )
-        response = self.chat_client.chat(messages, stream=is_cli)
+        response = self.chat_client.chat(messages, stream=self.is_cli)
         citations = self._extract_citations(response)
         return response, citations
 
@@ -155,6 +234,8 @@ class RAGAgent:
     @staticmethod
     def _extract_citations(response) -> set:
         matches = re.findall(r"cite=\[(.*?)]", response)
+        if len(matches) == 0:
+            matches = re.findall(r"\[(.*?)]", response)
 
         # Split each match by comma (in case there are multiple files per cite) and strip whitespace
         cited_files = set()
@@ -163,3 +244,10 @@ class RAGAgent:
             cited_files.update(cites)
 
         return cited_files
+
+    @staticmethod
+    def _calc_ms(start_time) -> int:
+        # Calculate difference in ms
+        elapsed_ms = (time.perf_counter() - start_time) * 1000
+        print(f"Elapsed: {type(elapsed_ms)}: {elapsed_ms}")
+        return int(round(elapsed_ms, 0))
