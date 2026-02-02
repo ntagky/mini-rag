@@ -86,7 +86,8 @@ class RAGAgent:
                 r_start = time.perf_counter()
                 chunks = self._retrieve_chunks(question, state["directions"])
                 state["retrieval"] = [
-                    f"source:{c.source}, score:{c.score}" for c in chunks
+                    f"document-id: {c.metadata.document_id}, page: {c.metadata.page}, chunk-id: {c.id}, source:{c.source}, score:{c.score}"
+                    for c in chunks
                 ]
                 state["latency_ms"]["retrieve"] = self._calc_ms(r_start)
 

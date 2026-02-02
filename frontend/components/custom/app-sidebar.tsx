@@ -124,7 +124,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             <Rocket className="size-4" />
                         </div>
                         <div className="grid flex-1 text-left text-sm leading-tight">
-                            <span className="truncate font-medium">MiniRag</span>
+                            <span className="truncate font-medium">MiniRAG</span>
                             <span className="truncate text-xs">Mini, yet regorous</span>
                         </div>
                     </SidebarMenuButton>
@@ -139,7 +139,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
       <SidebarFooter>
         <Link href={"/playground"} className="w-full p-1">
-          <Button variant={"destructive"} className="w-full">Challenge MiniRag 😏️</Button>
+          <Button variant={"destructive"} className="w-full">Challenge MiniRAG</Button>
         </Link>
       </SidebarFooter>
       <SidebarRail />

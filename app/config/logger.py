@@ -41,8 +41,6 @@ class JsonFormatter(logging.Formatter):
 
 
 def setup_logging(log_dir: Path = LOG_DIR) -> None:
-    os.makedirs(log_dir, exist_ok=True)
-
     log_file = os.path.join(
         log_dir, f"rag_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
     )

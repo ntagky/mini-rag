@@ -2,16 +2,14 @@ import argparse
 from app.config.logger import setup_logging
 from app.cli.console import runner
 from app.api.server import app
-from app.config.model_loader import load_embedding_model
 import uvicorn
 
 
 setup_logging()
-load_embedding_model()
 
 
 def main():
-    parser = argparse.ArgumentParser(description="MiniRag: choose interface mode")
+    parser = argparse.ArgumentParser(description="MiniRAG: choose interface mode")
     parser.add_argument(
         "mode",
         choices=["cli", "api"],

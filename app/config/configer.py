@@ -5,8 +5,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # APP METADATA
-APP_NAME = "MiniRag"
-with open("logo.txt", "r", encoding="utf-8") as file:
+APP_NAME = "MiniRAG"
+with open(".assets/logo.txt", "r", encoding="utf-8") as file:
     text = file.read()
 WELCOMING_MESSAGE_LOGO = text if text else APP_NAME
 
@@ -14,10 +14,15 @@ WELCOMING_MESSAGE_LOGO = text if text else APP_NAME
 BASE_DIR = Path(__file__).resolve().parent.parent
 CORPUS_DIR = Path("documents/")
 TMP_DOCUMENTS_DIR = Path(".tmp/documents")
+os.makedirs(TMP_DOCUMENTS_DIR, exist_ok=True)
 TMP_IMAGES_DIR = Path(".tmp/images")
+os.makedirs(TMP_IMAGES_DIR, exist_ok=True)
 LOG_DIR = Path(".logs")
+os.makedirs(LOG_DIR, exist_ok=True)
 
 # DATABASE STORAGE
+DB_DIR = Path(".db")
+os.makedirs(DB_DIR, exist_ok=True)
 SQLITE_DIR = Path(".db/sqlite")
 TFIDF_DIR = Path(".db/tfidf")
 

@@ -21,7 +21,7 @@ export function DynamicBreadcrumb() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbPage>MiniRag</BreadcrumbPage>
+            <BreadcrumbPage>MiniRAG</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>

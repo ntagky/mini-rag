@@ -21,7 +21,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MiniRag",
+  title: "MiniRAG",
   description: "Mini, yet precise",
 };
 

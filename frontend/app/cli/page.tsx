@@ -7,7 +7,7 @@ export default function CliPage() {
         <div className="flex-1 flex flex-col items-start p-2 pt-4 gap-4">
             <div className="flex flex-row items-center">
                 <h2 className="text-xl font-semibold tracking-tight">
-                    MiniRag is also available via <span className="font-bold">CLI</span>. Download it via
+                    MiniRAG is also available via <span className="font-bold">CLI</span>. Download it via
                 </h2>
                 <ConfettiButton className="ms-1 text-xl font-semibold" style={{paddingLeft: "4px", paddingRight: "4px"}}>
                     <SquareTerminal></SquareTerminal>

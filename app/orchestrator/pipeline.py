@@ -17,18 +17,19 @@ from ..model.chat_client import (
 )
 from ..config.logger import get_logger
 from ..retrieval.ranker import TfidfRank, TfidfRetriever
+from app.config.model_loader import load_embedding_model
 
 
 logger = get_logger("mini-rag." + __name__)
 
 
 class Orchestrator:
+    load_embedding_model()
     chunker = Chunker()
     embedder = Embedder(EmbedderModel.OPENAI)
     elastic_index = ElasticsearchIndex(embedding_dim=OPENAI_EMBEDDING_DIMENSIONS)
     sql_db = SqliteDb()
     tfidf_rank = TfidfRank()
-    tfidf_retriever = TfidfRetriever()
     chat_client = {
         LlmModel.OPENAI.value: ChatClient(LlmModel.OPENAI),
         LlmModel.OLLAMA.value: ChatClient(LlmModel.OLLAMA),
@@ -88,7 +89,7 @@ class Orchestrator:
             # Recompute TF-IDF matrix
             chunked_data = self.elastic_index.retrieve_all()
             self.tfidf_rank.build(chunked_data)
-
+            self.tfidf_retriever = TfidfRetriever()
             return len(unprocessed)
         else:
             logger.info("Corpus files are up to date.")
@@ -110,11 +111,11 @@ class Orchestrator:
         agent = RAGAgent(
             self.embedder,
             self.elastic_index,
-            self.tfidf_retriever,
+            TfidfRetriever(),
             self.chat_client[model.value],
             is_cli,
         )
         result: AgentResult = agent.run(question, messages, top_k)
-        logger.info(result.to_json())
+        logger.debug(result.to_json())
 
         return result.answer, result.citations

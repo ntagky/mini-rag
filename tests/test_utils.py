@@ -26,7 +26,7 @@ def test_agent_quicker():
     assert response.citations == []
 
 
-def test_agent_cite():
+def test_agent_cite_1():
     agent = RAGAgent(
         embedder=embedder,
         retriever=elastic_index,
@@ -34,10 +34,24 @@ def test_agent_cite():
         chat_client=chat_client,
         is_cli=True,
     )
-    question = "Who should I contact if I cannot identify the appropriate FDA staff?"
+    question = "In what specific clinical scenarios is a randomized withdrawal study design most effective for determining long-term efficacy and treatment duration?"
     messages = [ChatMessage(role="user", content=[ChatContent(text=question)])]
     response = agent.run(question, messages, 3)
-    assert any([cite.startswith("E3 Structure") for cite in response.citations])
+    assert any([cite.startswith("E10") for cite in response.citations])
+
+
+def test_agent_cite_2():
+    agent = RAGAgent(
+        embedder=embedder,
+        retriever=elastic_index,
+        fallback_retriever=tfidf_retriever,
+        chat_client=chat_client,
+        is_cli=True,
+    )
+    question = "Who must be listed as contacts in the consent document, and why does the FDA recommend a separate contact for questions regarding subjects rights?"
+    messages = [ChatMessage(role="user", content=[ChatContent(text=question)])]
+    response = agent.run(question, messages, 3)
+    assert any([cite.startswith("ICD") for cite in response.citations])
 
 
 def test_agent_chat():
