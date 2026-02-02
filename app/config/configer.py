@@ -12,9 +12,9 @@ WELCOMING_MESSAGE_LOGO = text if text else APP_NAME
 
 # STORAGE ATTRIBUTES
 BASE_DIR = Path(__file__).resolve().parent.parent
-CORPUS_DIR = Path("data/corpus/singular")
-MARKDOWN_DIR = Path("data/markdowns")
-TMP_DIR = Path(".tmp")
+CORPUS_DIR = Path("documents/")
+TMP_DOCUMENTS_DIR = Path(".tmp/documents")
+TMP_IMAGES_DIR = Path(".tmp/images")
 LOG_DIR = Path(".logs")
 
 # DATABASE STORAGE

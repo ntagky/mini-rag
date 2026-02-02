@@ -18,6 +18,7 @@ from ..config.configer import (
 
 
 class AgentResult(BaseModel):
+    answer: str
     citations: List[Any] = []
     log: Dict
 
@@ -100,12 +101,10 @@ class RAGAgent:
                 state["answer"] = response
                 state["citations"] = citations
                 state["latency_ms"]["total"] = self._calc_ms(start_time)
-                print(f"Returning state: {state}")
                 return AgentResult(answer=response, citations=citations, log=state)
         except Exception as e:
             state["errors"].append(str(e))
             state["latency_ms"]["total"] = self._calc_ms(start_time)
-            print(f"Returning state from exception: {state}")
             return AgentResult(
                 answer="I'm sorry, I ran into a technical glitch. Please try asking again in a moment.",
                 citations=[],
@@ -148,7 +147,6 @@ class RAGAgent:
                 {"role": "user", "content": [{"text": question}]},
             ]
         )
-        # print(response)
         return response
 
     def _retrieve_chunks(self, question: str, plan: dict) -> list:
@@ -204,7 +202,6 @@ class RAGAgent:
 
         styles = f"[draft_style: {plan.get('draft_style')}]"
         prompt = f"Styles:\n{styles}\n\nContext:\n{context}\n\nQuestion:\n{question}"
-        print(prompt)
         return prompt
 
     @staticmethod
@@ -249,5 +246,4 @@ class RAGAgent:
     def _calc_ms(start_time) -> int:
         # Calculate difference in ms
         elapsed_ms = (time.perf_counter() - start_time) * 1000
-        print(f"Elapsed: {type(elapsed_ms)}: {elapsed_ms}")
         return int(round(elapsed_ms, 0))

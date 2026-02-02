@@ -8,7 +8,7 @@ from .converter import PdfToMarkdownConverter
 from ..config.logger import get_logger
 from ..retrieval.persistor import File
 from ..model.chat_client import ChatClient
-from ..config.configer import CORPUS_DIR, MARKDOWN_DIR
+from ..config.configer import CORPUS_DIR, TMP_DOCUMENTS_DIR
 
 logger = get_logger("mini-rag." + __name__)
 
@@ -25,7 +25,7 @@ class CorpusLoader:
         self,
         chat_client: ChatClient,
         corpus_dir: Path = CORPUS_DIR,
-        markdown_dir: Path = MARKDOWN_DIR,
+        markdown_dir: Path = TMP_DOCUMENTS_DIR,
     ):
         self.chat_client = chat_client
         self.corpus_dir = Path(corpus_dir)
@@ -83,7 +83,7 @@ class CorpusLoader:
 
     @staticmethod
     def reset():
-        directory = MARKDOWN_DIR
+        directory = TMP_DOCUMENTS_DIR
 
         for file_path in directory.glob("*.md"):
             if file_path.is_file():

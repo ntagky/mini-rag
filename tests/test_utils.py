@@ -37,7 +37,6 @@ def test_agent_cite():
     question = "Who should I contact if I cannot identify the appropriate FDA staff?"
     messages = [ChatMessage(role="user", content=[ChatContent(text=question)])]
     response = agent.run(question, messages, 3)
-    print(response.citations)
     assert any([cite.startswith("E3 Structure") for cite in response.citations])
 
 

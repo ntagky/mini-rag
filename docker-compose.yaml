@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.2.4
+    container_name: elasticsearch-minirag
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:9.2.4
+    container_name: kibana-minirag
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-minirag
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+  ollama-pull-model:
+    image: ollama/ollama:latest
+    container_name: ollama-pull-model
+    volumes:
+      - ollama_data:/root/.ollama
+    entrypoint: /bin/sh
+    command: >
+      -c "sleep 10;
+      echo 'Checking for llava:7b...';
+      ollama serve &
+      sleep 5;
+      ollama pull llava:7b;
+      echo 'Model ready';"
+    depends_on:
+      - ollama
+
+volumes:
+  es_data:
+  ollama_data:

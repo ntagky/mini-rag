@@ -183,4 +183,4 @@ cython_debug/
 /.idea
 /.logs/
 .DS_Store
-/.models/BAAI
+/.models/

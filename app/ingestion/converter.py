@@ -3,7 +3,7 @@ from pathlib import Path
 from ..config.configer import (
     SYSTEM_PROMPT_IMAGE_DESCRIBER,
     USER_PROMPT_IMAGE_DESCRIBER,
-    TMP_DIR,
+    TMP_IMAGES_DIR,
 )
 from ..model.chat_client import ChatClient
 from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
@@ -79,7 +79,7 @@ class PdfToMarkdownConverter:
                     picture_uri = str(item.image.uri)
                     if picture_uri.startswith("data:image/png;base64,"):
                         element_image_filename = (
-                            TMP_DIR
+                            TMP_IMAGES_DIR
                             / f"{result.document.origin.filename}-image-{len(replacements) + 1}.png"
                         )
                         data = picture_uri.split(",")[1]

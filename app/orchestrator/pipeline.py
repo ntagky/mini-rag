@@ -1,7 +1,7 @@
 import uuid
 from typing import List
 from pathlib import Path
-from ..config.configer import TMP_DIR, OPENAI_EMBEDDING_DIMENSIONS
+from ..config.configer import TMP_IMAGES_DIR, OPENAI_EMBEDDING_DIMENSIONS
 from ..agent.rag_agent import RAGAgent, AgentResult
 from ..ingestion.chunker import Chunker
 from ..ingestion.loader import CorpusLoader
@@ -52,7 +52,7 @@ class Orchestrator:
             )
             documents = self.loader.load_files(set(unprocessed))
 
-            output_dir = Path(TMP_DIR)
+            output_dir = Path(TMP_IMAGES_DIR)
             output_dir.mkdir(parents=True, exist_ok=True)
             for corpus_file, document in zip(corpus_files, documents):
                 chunks, pages = self.chunker.chunk(document)
