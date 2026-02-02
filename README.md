@@ -8,6 +8,7 @@ A fully local Retrieval-Augmented Generation (RAG) application for ingesting doc
 
 - [Quick Start](#quick-start)
 - [Modes](#modes)
+- [Assumptions & Limitations](#assumptions-and-limitations)
 - [Requests & Responses](#requests-and-responses)
 - [Frontend](#frontend)
 - [Testing](#testing)
@@ -116,6 +117,12 @@ Returns the status of the service.
 Lists all available local (Ollama) and remote (OpenAI) models currently configured.
 #### 3. ```/api/v1/chat```
 Handles conversation logic by passing the message history directly in the request body for stateless execution.
+
+## Assumptions and Limitations
+
+First Run & VPN: The BAAI/bge-base-en-v1.5 model must be downloaded from HuggingFace on the first run; if the download fails due to VPN restrictions, disable the VPN briefly to allow the model to cache locally.
+
+Performance & Metrics: Tests were conducted using OpenAI because Ollama ran slowly on the local machine, which is also why token usage data is currently omitted from responses.
 
 ## Requests and Responses
 
