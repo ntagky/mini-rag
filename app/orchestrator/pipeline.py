@@ -37,6 +37,15 @@ class Orchestrator:
     loader = CorpusLoader(chat_client[LlmModel.OPENAI.value])
 
     def ingest_corpus(self, reset: bool = False) -> int:
+        """
+        Ingest corpus files into the retrieval system.
+
+        Args:
+            reset (bool): If True, clears existing indexes, database records, and cached data before ingestion.
+
+        Returns:
+            int: Number of newly ingested files.
+        """
         if reset:
             self.elastic_index.reset()
             self.sql_db.reset()
@@ -103,6 +112,19 @@ class Orchestrator:
         model: LlmModel = DEFAULT_LLM_MODEL,
         is_cli: bool = False,
     ):
+        """
+        Run a RAG query using the specified language model and retrieval strategy.
+
+        Args:
+            question (str): User question to be answered.
+            messages (List[ChatMessage], optional): Conversation history for contextual responses.
+            top_k (int, optional): Number of top retrieval results to consider. Defaults to -1.
+            model (LlmModel, optional): Language model used for generation.
+            is_cli (bool, optional): Whether the request originates from the CLI.
+
+        Returns:
+            Tuple[str, List]: Generated answer and its associated citations.
+        """
         # Create a message chain if its empty
         if len(messages) == 0:
             messages = [ChatMessage(role="user", content=[ChatContent(text=question)])]

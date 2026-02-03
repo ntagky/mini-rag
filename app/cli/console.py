@@ -7,6 +7,9 @@ logger = get_logger("mini-rag." + __name__)
 
 
 def runner():
+    """
+    Start the interactive CLI loop, display available commands, and route ingest, query, and chat requests.
+    """
     logger.info(WELCOMING_MESSAGE_LOGO)
     logger.info("")
     logger.info("Commands:")

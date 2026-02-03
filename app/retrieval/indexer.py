@@ -39,6 +39,16 @@ class DocumentChunkDistant(DocumentChunk):
 
 class ElasticsearchIndex:
     def __init__(self, embedding_dim: int, index_name: str = "document_chunks"):
+        """
+        Initialize the Elasticsearch client and ensure the index exists.
+
+        Args:
+            embedding_dim (int): Dimension of embedding vectors.
+            index_name (str, optional): Name of the Elasticsearch index.
+
+        Returns:
+            None
+        """
         self.client = Elasticsearch("http://localhost:9200")
         self.index_name = index_name
         self.embedding_dim = embedding_dim
@@ -49,6 +59,9 @@ class ElasticsearchIndex:
             logger.debug(f"[ElasticDB] Loaded existing index '{index_name}'")
 
     def create_index(self):
+        """
+        Create a new Elasticsearch index with the appropriate mapping for document chunks.
+        """
         mapping = {
             "mappings": {
                 "properties": {
@@ -66,6 +79,12 @@ class ElasticsearchIndex:
         logger.debug(f"[ElasticDB] Created index '{self.index_name}'")
 
     def add_items(self, document_entries: List[DocumentChunk]):
+        """
+        Add multiple document chunks to the Elasticsearch index.
+
+        Args:
+            document_entries (List[DocumentChunk]): List of chunks to index.
+        """
         for entry in document_entries:
             doc = {
                 "text": entry.text,
@@ -79,6 +98,17 @@ class ElasticsearchIndex:
     def similarity_search(
         self, query_embedding, top_k: int = 3, threshold: float = MIN_SCORE_THRESHOLD
     ) -> List[DocumentChunkDistant]:
+        """
+        Perform a similarity search over the indexed chunks using a query embedding.
+
+        Args:
+            query_embedding: Embedding vector to search for similar chunks.
+            top_k (int, optional): Number of top results to return. Defaults to 3.
+            threshold (float, optional): Minimum score threshold to include results. Defaults to MIN_SCORE_THRESHOLD.
+
+        Returns:
+            List[DocumentChunkDistant]: Ranked list of similar chunks with scores.
+        """
         query = {"field": "embedding", "query_vector": query_embedding, "k": top_k}
 
         res = self.client.search(index=self.index_name, knn=query)
@@ -105,16 +135,31 @@ class ElasticsearchIndex:
         return results
 
     def delete(self, ids: List[str]):
+        """
+        Delete specific document chunks from the Elasticsearch index.
+
+        Args:
+            ids (List[str]): List of document IDs to delete.
+        """
         for doc_id in ids:
             self.client.delete(index=self.index_name, id=doc_id, ignore=[404])
         logger.debug(f"[ElasticDB] Deleted {len(ids)} items")
 
     def reset(self):
+        """
+        Delete and recreate the Elasticsearch index, effectively clearing all stored data.
+        """
         self.client.indices.delete(index=self.index_name, ignore=[400, 404])
         logger.debug(f"[ElasticDB] Reset index '{self.index_name}'")
         self.create_index()
 
     def retrieve_all(self) -> List[DocumentChunk]:
+        """
+        Retrieve all document chunks from the Elasticsearch index.
+
+        Returns:
+            List[DocumentChunk]: All stored document chunks.
+        """
         res = self.client.search(
             index=self.index_name, query={"match_all": {}}, size=1000
         )

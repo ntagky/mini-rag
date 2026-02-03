@@ -35,6 +35,16 @@ class RAGAgent:
         chat_client: ChatClient,
         is_cli: bool,
     ):
+        """
+        Initialize a retrieval-augmented generation (RAG) agent.
+
+        Args:
+            embedder (Embedder): Embedding service for converting text to vectors.
+            retriever (ElasticsearchIndex): Primary retriever using Elasticsearch.
+            fallback_retriever (TfidfRetriever): Fallback retriever using TF-IDF.
+            chat_client (ChatClient): LLM client to generate responses.
+            is_cli (bool): Whether the agent runs in CLI mode (enables streaming output).
+        """
         self.embedder = embedder
         self.retriever = retriever
         self.fallback_retriever = fallback_retriever
@@ -42,6 +52,17 @@ class RAGAgent:
         self.is_cli = is_cli
 
     def run(self, question: str, messages: List[ChatMessage], top_k) -> AgentResult:
+        """
+        Execute the RAG pipeline: plan, retrieve chunks, draft response, and return citations.
+
+        Args:
+            question (str): User question to answer.
+            messages (List[ChatMessage]): Conversation history.
+            top_k (int): Maximum number of top chunks to retrieve.
+
+        Returns:
+            AgentResult: Contains answer text, citations, and detailed log.
+        """
         state: Dict[str, Any] = {
             "trace_id": str(uuid.uuid4()),
             "question": question,
@@ -113,6 +134,16 @@ class RAGAgent:
             )
 
     def _generate_plan(self, question: str, top_k: int) -> dict:
+        """
+        Generate a plan for the question using the chat client.
+
+        Args:
+            question (str): User question.
+            top_k (int): Number of top chunks to retrieve.
+
+        Returns:
+            dict: Planning options, including top_k, retrieval strategy, and fallback thresholds.
+        """
         plan_json = self.chat_client.chat(
             [
                 {
@@ -129,6 +160,15 @@ class RAGAgent:
         return plan
 
     def _rewrite_question(self, messages: list[ChatMessage]):
+        """
+        Rewrite a question based on previous messages to improve retrieval or LLM performance.
+
+        Args:
+            messages (list[ChatMessage]): Last conversation messages.
+
+        Returns:
+            str: Rewritten question string.
+        """
         question = (
             f"Current question:\n {messages[0].get('content')[0].get('text')}\n\n"
         )
@@ -148,6 +188,16 @@ class RAGAgent:
         return response
 
     def _retrieve_chunks(self, question: str, plan: dict) -> list:
+        """
+        Retrieve the most relevant document chunks from Elasticsearch and optionally TF-IDF fallback.
+
+        Args:
+            question (str): Query string to embed.
+            plan (dict): Retrieval strategy and top_k information.
+
+        Returns:
+            list: List of DocumentChunkDistant objects representing retrieved chunks.
+        """
         embedding = self.embedder.embed([question])[0]
         chunks = self.retriever.similarity_search(
             embedding, top_k=plan["top_k"], threshold=plan["fallback_threshold"]
@@ -165,6 +215,18 @@ class RAGAgent:
     def _draft_response(
         self, messages: list[ChatMessage], question: str, chunks: list, plan: dict
     ) -> Tuple[str, Set]:
+        """
+        Generate the final answer using the LLM and retrieved chunks.
+
+        Args:
+            messages (list[ChatMessage]): Conversation history.
+            question (str): User question.
+            chunks (list): Retrieved document chunks.
+            plan (dict): Drafting instructions and style.
+
+        Returns:
+            Tuple[str, Set]: Generated answer text and a set of citations.
+        """
         prompt = self._build_user_prompt(question, chunks, plan)
         messages.extend(
             [
@@ -181,6 +243,17 @@ class RAGAgent:
 
     @staticmethod
     def _build_user_prompt(question: str, chunks: list, plan: dict) -> str:
+        """
+        Construct a prompt for the LLM including context, citations, and draft style.
+
+        Args:
+            question (str): User question.
+            chunks (list): Retrieved document chunks.
+            plan (dict): Draft style and instructions.
+
+        Returns:
+            str: Prompt text to feed to the LLM.
+        """
         context_blocks = []
         for chunk in chunks:
             metadata = chunk.metadata
@@ -197,6 +270,18 @@ class RAGAgent:
 
     @staticmethod
     def _parse_plan_options(response_text: str) -> dict:
+        """
+        Parse a JSON string returned by the LLM into a plan dictionary.
+
+        Args:
+            response_text (str): Raw LLM output.
+
+        Returns:
+            dict: Parsed plan options including retrieval strategy, top_k, etc.
+
+        Raises:
+            ValueError: If JSON parsing fails.
+        """
         try:
             # Remove leading/trailing whitespace
             response_text = response_text.strip()
@@ -218,6 +303,15 @@ class RAGAgent:
 
     @staticmethod
     def _extract_citations(response) -> set:
+        """
+        Extract cited documents from the LLM response text.
+
+        Args:
+            response (str): LLM-generated text containing citations.
+
+        Returns:
+            set: Set of citation identifiers.
+        """
         matches = re.findall(r"cite=\[(.*?)]", response)
         if len(matches) == 0:
             matches = re.findall(r"\[(.*?)]", response)
@@ -232,6 +326,15 @@ class RAGAgent:
 
     @staticmethod
     def _calc_ms(start_time) -> int:
+        """
+        Calculate elapsed time in milliseconds from a start time.
+
+        Args:
+            start_time (float): Starting time (from time.perf_counter()).
+
+        Returns:
+            int: Elapsed time in milliseconds.
+        """
         # Calculate difference in ms
         elapsed_ms = (time.perf_counter() - start_time) * 1000
         return int(round(elapsed_ms, 0))

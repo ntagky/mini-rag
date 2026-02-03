@@ -14,11 +14,26 @@ _RUN_ID = str(uuid.uuid4())
 
 
 def get_run_id() -> str:
+    """
+    Get the unique run ID for this execution session.
+
+    Returns:
+        str: UUID string representing the current run.
+    """
     return _RUN_ID
 
 
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
+        """
+        Convert a log record into a JSON string.
+
+        Args:
+            record (logging.LogRecord): The log record to format.
+
+        Returns:
+            str: JSON-formatted log string.
+        """
         log = {
             "timestamp": datetime.utcnow().isoformat(),
             "level": record.levelname,
@@ -40,7 +55,13 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(log)
 
 
-def setup_logging(log_dir: Path = LOG_DIR) -> None:
+def setup_logging(log_dir: Path = LOG_DIR):
+    """
+    Set up the logging system with console output and JSON file logging.
+
+    Args:
+        log_dir (Path, optional): Directory where log files will be stored. Defaults to LOG_DIR.
+    """
     log_file = os.path.join(
         log_dir, f"rag_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
     )
@@ -66,4 +87,13 @@ def setup_logging(log_dir: Path = LOG_DIR) -> None:
 
 
 def get_logger(name: str) -> logging.Logger:
+    """
+    Get a logger instance with the given name.
+
+    Args:
+        name (str): Name of the logger.
+
+    Returns:
+        logging.Logger: Logger instance configured with JSON and console handlers.
+    """
     return logging.getLogger(name)

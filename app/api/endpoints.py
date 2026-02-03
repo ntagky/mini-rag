@@ -1,7 +1,5 @@
-from typing import List
 from fastapi import APIRouter
-from pydantic import BaseModel
-from typing import Literal
+from .dto import QueryRequest
 from ..config.logger import get_logger
 from ..orchestrator.pipeline import Orchestrator
 from ..model.chat_client import LlmModel, ChatMessage, ChatContent, DEFAULT_LLM_MODEL
@@ -12,28 +10,39 @@ router = APIRouter()
 orchestrator = Orchestrator()
 
 
-class QueryRequestMessage(BaseModel):
-    role: Literal["user", "assistant"]
-    content: str
-
-
-class QueryRequest(BaseModel):
-    messages: List[QueryRequestMessage]
-    model: str
-
-
 @router.get("/health")
 def health():
+    """
+    Health check endpoint to verify that the API is running.
+
+    Returns:
+        dict: Status of the service, e.g., {"status": "ok"}.
+    """
     return {"status": "ok"}
 
 
 @router.get("/api/v1/models")
 def get_models():
+    """
+    Retrieve a list of available LLM models.
+
+    Returns:
+        List[str]: List of model names as strings.
+    """
     return [model.value for model in LlmModel]
 
 
 @router.post("/api/v1/chat")
 async def query(request: QueryRequest):
+    """
+    Handle a chat query request via POST, routing it to the orchestrator.
+
+    Args:
+        request (QueryRequest): The request payload containing messages and the model.
+
+    Returns:
+        dict: Contains the LLM response text and any citations, e.g. {"content": "<response>", "citations": [...]}
+    """
     model = (
         LlmModel(request.model)
         if LlmModel.has_value(request.model)

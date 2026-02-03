@@ -9,7 +9,10 @@ from ..config.logger import get_logger
 logger = get_logger("mini-rag." + __name__)
 
 
-def load_embedding_model() -> None:
+def load_embedding_model():
+    """
+    Ensure the sentence transformer embedding model is available locally; download and persist it if missing.
+    """
     if Path(OFFLINE_SENTENCE_TRANSFORMER_MODEL_LOCAL_PATH).exists():
         logger.debug(
             f"Sentence transformer model found locally at path: {OFFLINE_SENTENCE_TRANSFORMER_MODEL_LOCAL_PATH}"

@@ -27,6 +27,14 @@ class CorpusLoader:
         corpus_dir: Path = CORPUS_DIR,
         markdown_dir: Path = TMP_DOCUMENTS_DIR,
     ):
+        """
+        Initialize the corpus loader with paths and a PDF-to-Markdown converter.
+
+        Args:
+            chat_client (ChatClient): Language model client for processing documents.
+            corpus_dir (Path, optional): Directory containing PDF files. Defaults to CORPUS_DIR.
+            markdown_dir (Path, optional): Directory to store converted markdown files. Defaults to TMP_DOCUMENTS_DIR.
+        """
         self.chat_client = chat_client
         self.corpus_dir = Path(corpus_dir)
         self.markdown_dir = Path(markdown_dir)
@@ -36,6 +44,12 @@ class CorpusLoader:
         )
 
     def scan_corpus_dir(self) -> List[CorpusFile]:
+        """
+        Scan the corpus directory for PDF files, compute their page count and content hash.
+
+        Returns:
+            List[CorpusFile]: List of discovered corpus files with metadata.
+        """
         corpus_files = []
         pdf_files = list(self.corpus_dir.glob("*.pdf"))
         for pdf_file in pdf_files:
@@ -62,6 +76,16 @@ class CorpusLoader:
     def get_unprocessed_files(
         corpus_files: List[CorpusFile], ingested_files: List[File]
     ) -> List[str]:
+        """
+        Determine which corpus files have not yet been ingested by comparing hashes with existing database records.
+
+        Args:
+            corpus_files (List[CorpusFile]): List of scanned corpus files.
+            ingested_files (List[File]): List of files already ingested.
+
+        Returns:
+            List[str]: Paths of unprocessed files.
+        """
         unprocessed = []
         for corpus_file in corpus_files:
             found = False
@@ -79,10 +103,22 @@ class CorpusLoader:
         return unprocessed
 
     def load_files(self, files: set[str]) -> list[DoclingDocument]:
+        """
+        Convert a set of PDF files to DoclingDocument objects via the PDF-to-Markdown converter.
+
+        Args:
+            files (set[str]): File paths to convert.
+
+        Returns:
+            list[DoclingDocument]: Converted document objects ready for chunking.
+        """
         return self.converter.convert_files(files)
 
     @staticmethod
     def reset():
+        """
+        Delete all markdown files in the temporary documents directory.
+        """
         directory = TMP_DOCUMENTS_DIR
 
         for file_path in directory.glob("*.md"):

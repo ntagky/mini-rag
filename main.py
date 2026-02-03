@@ -9,6 +9,9 @@ setup_logging()
 
 
 def main():
+    """
+    Parse the interface mode argument and start either the CLI runner or the FastAPI server.
+    """
     parser = argparse.ArgumentParser(description="MiniRAG: choose interface mode")
     parser.add_argument(
         "mode",

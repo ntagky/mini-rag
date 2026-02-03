@@ -11,6 +11,9 @@ logger = get_logger("mini-rag." + __name__)
 
 class Chunker:
     def __init__(self):
+        """
+        Initialize the HybridChunker with a locally stored Hugging Face tokenizer.
+        """
         tokenizer = AutoTokenizer.from_pretrained(
             OFFLINE_SENTENCE_TRANSFORMER_MODEL_LOCAL_PATH
         )
@@ -21,6 +24,15 @@ class Chunker:
         self.chunker = HybridChunker(tokenizer=base_tokenizer, max_tokens=max_tokens)
 
     def chunk(self, doc: DoclingDocument) -> Tuple[List[str], List[str]]:
+        """
+        Split a DoclingDocument into contextualized text chunks and map them to their source pages.
+
+        Args:
+            doc (DoclingDocument): Parsed document to be chunked.
+
+        Returns:
+            Tuple[List[str], List[str]]: A tuple containing the generated text chunks and their corresponding page identifiers.
+        """
         chunks: List[str] = []
         pages: List[str] = []
         chunk_iter = self.chunker.chunk(dl_doc=doc)
