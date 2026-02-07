@@ -4,7 +4,7 @@ from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTok
 from transformers import AutoTokenizer
 from typing import List, Tuple
 from app.config.configer import OFFLINE_SENTENCE_TRANSFORMER_MODEL_LOCAL_PATH
-from ..config.logger import get_logger
+from app.config.logger import get_logger
 
 logger = get_logger("mini-rag." + __name__)
 

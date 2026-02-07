@@ -27,7 +27,6 @@ SQLITE_DIR = Path(".db/sqlite")
 TFIDF_DIR = Path(".db/tfidf")
 
 # MODELS
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OLLAMA_BASE_URL = "http://localhost:11434"
 SENTENCE_TRANSFORMER_MODEL_NAME = "BAAI/bge-base-en-v1.5"
 SENTENCE_TRANSFORMER_DIMENSIONS = 384
@@ -65,7 +64,8 @@ If the answer is not in the context, ask the user for the specific information o
 Rules:
 - No introductions
 - No explanations outside the answer
-- Always include file citations, using only this format: cite=[filename+3,4 | filename+66,99].
+- Always include file citations, using only this format: cite=[filename+3,4,10 | filename+66,98,99].
+If one source has multiple page references, combine to one entry placing pages next to each other next to the '+' sign.
 - Be concise and factual
 """
 
@@ -89,31 +89,60 @@ Rules:
 """
 
 USER_PROMPT_PLANNER = """
-Generate a JSON object containing all available plan options for a RAG agent.
-Each option should have one of possible values shown below - except keywords which you should generate.
-Only output JSON.
-Do not include explanations, descriptions, or any text outside the JSON.
+You are a planner for a Retrieval-Augmented Generation (RAG) agent.
 
-In case that the following question expresses greeting, gratitude or it is a capability question,
-answer accordingly filling out your answer in the "quick_answer" field. Otherwise, leave that field empty.
+Generate ONLY a valid JSON object describing the execution plan.
+Do not include explanations, markdown, comments, or any text outside the JSON.
 
-Set "query_rewriting" to true when the question is an actual search question and broad, ambiguous, or depends on prior
-context such that a single self-contained embedding query would perform better.
+Use ONLY the step names and fields defined below.
+Never invent new step names or fields.
+Prefer the minimum number of steps required to answer the question.
 
-Set up to 3 string keywords in "keyword" field for later analytic purposes.
+SPECIAL RULE:
+If the question is a greeting, gratitude, or capability question,
+return ONLY the "answer" step and do not include any other steps.
 
-Pick one value from this JSON based on the following question and return the corresponding JSON:
+REWRITE RULES:
+Only include the rewrite step when the question:
+- depends on prior conversation
+- is ambiguous
+- is too short
+- would benefit from semantic expansion for better embedding retrieval
+
+Otherwise, skip rewriting.
+
+RETRIEVAL RULES:
+Include the retrieve step for knowledge-based questions.
+Skip retrieval only when the answer is trivial or conversational.
+
+DRAFT RULES:
+Include the draft step whenever retrieval is used.
+Use:
+- "concise" for direct factual answers
+- "detailed" for complex or technical explanations
+- "explain_reasoning" only when the user explicitly asks for reasoning
+
+KEYWORDS:
+Generate up to 3 short keywords for analytics.
+
+Return a JSON object with this exact structure:
+
 {
-  "quick_answer": "..",
-  "retrieval_strategy": "vector_only" | "tfidf_fallback" | "vector+tfidf_fallback"],
-  "top_k": 1 | 3 | 5 | 10 | 20],
-  "draft_style": "concise" | "detailed" | "explain_reasoning",
-  "citation_style": "footnotes",
-  "fallback_threshold": 0.0 | 0.1 | 0.25 | 0.5,
-  "query_rewriting": true | false,
-  "keywords": [..string]
+    "steps": [
+        { "name": "answer", "response": "..." },
+        { "name": "rewrite", "style": "standalone | expand | disambiguate" },
+        {
+            "name": "retrieve",
+            "strategy": "vector_only | tfidf_fallback | vector+tfidf_fallback",
+            "top_k": 1 | 3 | 5 | 10 | 20,
+            "fallback_threshold": 0.0 | 0.1 | 0.25 | 0.5
+        },
+        { "name": "draft", "style": "concise | detailed | explain_reasoning" }
+    ],
+    "keywords": ["strings"]
 }
-Do not include trailing commas or extra newlines.
+
+Do not include trailing commas.
 
 Question:
 """

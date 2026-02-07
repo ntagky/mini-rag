@@ -1,3 +1,4 @@
+import os
 import ollama
 from enum import Enum
 from openai import OpenAI
@@ -12,10 +13,9 @@ from openai.types.chat import (
     ChatCompletionAssistantMessageParam,
     ChatCompletionContentPartImageParam,
 )
-from ..config.logger import get_logger
-from ..config.configer import (
+from app.config.logger import get_logger
+from app.config.configer import (
     OLLAMA_BASE_URL,
-    OPENAI_API_KEY,
     OPENAI_EMBEDDING_MODEL,
     OPENAI_COMPLETION_MODEL,
     OLLAMA_CHAT_MODEL,
@@ -246,7 +246,7 @@ class OpenAILLM(BaseLLM):
         self.model = OPENAI_COMPLETION_MODEL
 
         self.temperature = temperature
-        self.client = OpenAI(api_key=OPENAI_API_KEY)
+        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     def chat(self, messages: List[ChatMessage]) -> str:
         """

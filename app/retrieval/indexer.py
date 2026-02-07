@@ -1,3 +1,4 @@
+import os
 from typing import List
 from dataclasses import dataclass, asdict
 from elasticsearch import Elasticsearch
@@ -49,7 +50,7 @@ class ElasticsearchIndex:
         Returns:
             None
         """
-        self.client = Elasticsearch("http://localhost:9200")
+        self.client = Elasticsearch(os.getenv("ELASTICSEARCH_URL"))
         self.index_name = index_name
         self.embedding_dim = embedding_dim
 

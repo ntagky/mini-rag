@@ -1,22 +1,22 @@
 import uuid
 from typing import List
 from pathlib import Path
-from ..config.configer import TMP_IMAGES_DIR, OPENAI_EMBEDDING_DIMENSIONS
-from ..agent.rag_agent import RAGAgent, AgentResult
-from ..ingestion.chunker import Chunker
-from ..ingestion.loader import CorpusLoader
-from ..retrieval.embedder import Embedder, EmbedderModel
-from ..retrieval.indexer import ElasticsearchIndex, ChunkMetadata, DocumentChunk
-from ..retrieval.persistor import SqliteDb, File
-from ..model.chat_client import (
+from app.config.configer import TMP_IMAGES_DIR, OPENAI_EMBEDDING_DIMENSIONS
+from app.agent.rag_agent import RAGAgent, AgentResult
+from app.ingestion.chunker import Chunker
+from app.ingestion.loader import CorpusLoader
+from app.retrieval.embedder import Embedder, EmbedderModel
+from app.retrieval.indexer import ElasticsearchIndex, ChunkMetadata, DocumentChunk
+from app.retrieval.persistor import SqliteDb, File
+from app.model.chat_client import (
     ChatClient,
     LlmModel,
     ChatMessage,
     ChatContent,
     DEFAULT_LLM_MODEL,
 )
-from ..config.logger import get_logger
-from ..retrieval.ranker import TfidfRank, TfidfRetriever
+from app.config.logger import get_logger
+from app.retrieval.ranker import TfidfRank, TfidfRetriever
 from app.config.model_loader import load_embedding_model
 
 
@@ -98,7 +98,6 @@ class Orchestrator:
             # Recompute TF-IDF matrix
             chunked_data = self.elastic_index.retrieve_all()
             self.tfidf_rank.build(chunked_data)
-            self.tfidf_retriever = TfidfRetriever()
             return len(unprocessed)
         else:
             logger.info("Corpus files are up to date.")
@@ -138,6 +137,5 @@ class Orchestrator:
             is_cli,
         )
         result: AgentResult = agent.run(question, messages, top_k)
-        logger.debug(result.to_json())
 
         return result.answer, result.citations

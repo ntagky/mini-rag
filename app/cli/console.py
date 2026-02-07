@@ -1,6 +1,7 @@
 from app.config.configer import WELCOMING_MESSAGE_LOGO
 from app.orchestrator.pipeline import Orchestrator
 from app.config.logger import get_logger
+from app.bootstrap.health_checks import full_environment_validation
 from app.model.chat_client import LlmModel, DEFAULT_LLM_MODEL, ChatMessage, ChatContent
 
 logger = get_logger("mini-rag." + __name__)
@@ -13,6 +14,7 @@ def runner():
     logger.info(WELCOMING_MESSAGE_LOGO)
     logger.info("")
     logger.info("Commands:")
+    logger.info("  doctor → health checks to external services")
     logger.info("  ingest [--reset] → scan and ingest corpus")
     logger.info(
         f"  query <your question> [--top-k N] [--model {'|'.join([e.value for e in LlmModel])}] → ask a question over corpus"
@@ -32,6 +34,17 @@ def runner():
 
             if user_input.lower() == "exit":
                 break
+
+            if user_input.startswith("doctor"):
+                is_valid, results = full_environment_validation()
+                logger.info(
+                    f"Overall status {'healthy' if is_valid else 'unhealthy'}.\nServices:"
+                )
+                for check in results["checks"]:
+                    logger.info(
+                        f"  - {check['service']} [{'healthy' if check['status'] else 'unhealthy'}]: {check['message']}"
+                    )
+                continue
 
             # Parse /ingest command
             if user_input.startswith("ingest"):

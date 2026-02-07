@@ -1,8 +1,9 @@
 from fastapi import APIRouter
-from .dto import QueryRequest
-from ..config.logger import get_logger
-from ..orchestrator.pipeline import Orchestrator
-from ..model.chat_client import LlmModel, ChatMessage, ChatContent, DEFAULT_LLM_MODEL
+from app.api.dto import QueryRequest
+from app.config.logger import get_logger
+from app.orchestrator.pipeline import Orchestrator
+from app.bootstrap.health_checks import full_environment_validation
+from app.model.chat_client import LlmModel, ChatMessage, ChatContent, DEFAULT_LLM_MODEL
 
 logger = get_logger("mini-rag." + __name__)
 
@@ -18,7 +19,9 @@ def health():
     Returns:
         dict: Status of the service, e.g., {"status": "ok"}.
     """
-    return {"status": "ok"}
+
+    is_valid, results = full_environment_validation()
+    return results
 
 
 @router.get("/api/v1/models")

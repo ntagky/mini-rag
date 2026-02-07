@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel
 from datetime import datetime
-from ..config.logger import get_logger
-from ..config.configer import SQLITE_DIR
+from app.config.logger import get_logger
+from app.config.configer import SQLITE_DIR
 
 logger = get_logger("mini-rag." + __name__)
 
