@@ -1,4 +1,5 @@
 import os
+from ollama import Client
 from openai import OpenAI
 from typing import Tuple, Dict
 from elasticsearch import Elasticsearch
@@ -48,6 +49,26 @@ def validate_elasticsearch() -> tuple[bool, str]:
         return False, f"Elasticsearch error: {str(e)}"
 
 
+def validate_ollama() -> tuple[bool, str]:
+    """
+    Ping Ollama tags.
+    """
+
+    try:
+        ollama_client = Client(os.getenv("OLLAMA_URL"))
+
+        if ollama_client.list():
+            return True, "Ollama reachable"
+
+        return False, "Ollama did not respond to ping"
+
+    except ESConnectionError:
+        return False, "Cannot connect to Ollama"
+
+    except Exception as e:
+        return False, f"Ollama error: {str(e)}"
+
+
 def full_environment_validation() -> Tuple[bool, Dict]:
     """
     Perform full environment validation:
@@ -72,6 +93,9 @@ def full_environment_validation() -> Tuple[bool, Dict]:
 
     es_ok, es_msg = validate_elasticsearch()
     checks.append({"service": "Elasticsearch", "status": es_ok, "message": es_msg})
+
+    ollama_ok, ollama_msg = validate_ollama()
+    checks.append({"service": "Ollama", "status": ollama_ok, "message": ollama_msg})
 
     all_ok = all(ok for _, ok, _ in checks)
 

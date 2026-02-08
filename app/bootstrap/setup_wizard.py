@@ -1,10 +1,12 @@
+import os
 from pathlib import Path
 from getpass import getpass
-from dotenv import load_dotenv, dotenv_values
+from dotenv import load_dotenv
 from app.config.logger import get_logger
 
 logger = get_logger("mini-rag." + __name__)
 
+load_dotenv()
 ENV_FILE = Path(".env")
 
 
@@ -33,7 +35,7 @@ def prompt_secret(prompt: str, default: str | None):
 def run_setup():
     logger.info("🔧 MiniRAG Environment Setup\n")
 
-    existing_env = dotenv_values(ENV_FILE) if ENV_FILE.exists() else {}
+    existing_env = dict(os.environ)
 
     openai_key = prompt_secret(
         "OPENAI_API_KEY",
@@ -45,11 +47,18 @@ def run_setup():
         existing_env.get("ELASTICSEARCH_URL"),
     )
 
-    # Preserve unknown keys
-    existing_env["OPENAI_API_KEY"] = openai_key
-    existing_env["ELASTICSEARCH_URL"] = es_url
+    ollama_url = prompt_with_default(
+        "OLLAMA_URL",
+        existing_env.get("OLLAMA_URL"),
+    )
 
-    content = "\n".join(f"{k}={v}" for k, v in existing_env.items())
+    # Preserve unknown keys
+    required_env = dict()
+    required_env["OPENAI_API_KEY"] = openai_key
+    required_env["ELASTICSEARCH_URL"] = es_url
+    required_env["OLLAMA_URL"] = ollama_url
+
+    content = "\n".join(f"{k}={v}" for k, v in required_env.items())
 
     ENV_FILE.write_text(content + "\n")
 

@@ -15,7 +15,6 @@ from openai.types.chat import (
 )
 from app.config.logger import get_logger
 from app.config.configer import (
-    OLLAMA_BASE_URL,
     OPENAI_EMBEDDING_MODEL,
     OPENAI_COMPLETION_MODEL,
     OLLAMA_CHAT_MODEL,
@@ -140,7 +139,7 @@ class OllamaLLM(BaseLLM):
             temperature (float, optional): Temperature setting for generation. Defaults to 0.0.
         """
         self.model = OLLAMA_CHAT_MODEL
-        self.base_url = OLLAMA_BASE_URL
+        self.base_url = os.getenv("OLLAMA_URL")
         self.temperature = temperature
 
     def chat(self, messages: list[ChatMessage]) -> str:

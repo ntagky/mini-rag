@@ -1,9 +1,12 @@
-from pathlib import Path
-from dotenv import dotenv_values
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 REQUIRED_ENV_VARS = [
     "OPENAI_API_KEY",
     "ELASTICSEARCH_URL",
+    "OLLAMA_URL",
 ]
 
 
@@ -13,13 +16,6 @@ def validate_env() -> tuple[bool, list[str]]:
     Returns:
         (is_valid, missing_vars)
     """
-    env_path = Path(".env")
-
-    if not env_path.exists():
-        return False, REQUIRED_ENV_VARS
-
-    env_vars = dotenv_values(env_path)
-
-    missing = [var for var in REQUIRED_ENV_VARS if not env_vars.get(var)]
+    missing = [var for var in REQUIRED_ENV_VARS if not os.getenv(var)]
 
     return len(missing) == 0, missing

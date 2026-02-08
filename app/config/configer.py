@@ -3,6 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 # APP METADATA
 APP_NAME = "MiniRAG"
@@ -11,7 +12,6 @@ with open(".assets/logo.txt", "r", encoding="utf-8") as file:
 WELCOMING_MESSAGE_LOGO = text if text else APP_NAME
 
 # STORAGE ATTRIBUTES
-BASE_DIR = Path(__file__).resolve().parent.parent
 CORPUS_DIR = Path("documents/")
 TMP_DOCUMENTS_DIR = Path(".tmp/documents")
 os.makedirs(TMP_DOCUMENTS_DIR, exist_ok=True)
@@ -27,7 +27,6 @@ SQLITE_DIR = Path(".db/sqlite")
 TFIDF_DIR = Path(".db/tfidf")
 
 # MODELS
-OLLAMA_BASE_URL = "http://localhost:11434"
 SENTENCE_TRANSFORMER_MODEL_NAME = "BAAI/bge-base-en-v1.5"
 SENTENCE_TRANSFORMER_DIMENSIONS = 384
 OFFLINE_SENTENCE_TRANSFORMER_MODEL_LOCAL_PATH = ".models/BAAI/bge-base-en-v1.5"

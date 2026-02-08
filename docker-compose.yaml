@@ -47,6 +47,27 @@ services:
     depends_on:
       - ollama
 
+  fastapi-next-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fastapi_next_app
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - OLLAMA_URL=http://ollama:11434
+    volumes:
+      - db_data:/.db
+      - local_models:/.local_models
+    restart: unless-stopped
+    depends_on:
+      - elasticsearch
+      - ollama-pull-model
+
 volumes:
   es_data:
   ollama_data:
+  db_data:
+  local_models:
