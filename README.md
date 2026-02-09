@@ -18,63 +18,130 @@ A fully local Retrieval-Augmented Generation (RAG) application for ingesting doc
 
 ## Quick Start
 
-#### 1. Clone Repository
+### 1. Clone Repository
 
 ```bash
 git clone https://github.com/ntagky/mini-rag.git
 cd mini-rag
 ```
 
-#### 2. Create Environment
+---
 
-Using conda:
+### 2. Create `.env` File
 
-```bash
-conda create -n mini-rag python=3.11
-conda activate mini-rag
-pip install -r requirements.txt
-```
-
-Using venv:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-#### 3. Run Docker Compose
-
-Start the services:
-
-```bash
-docker compose -f docker-compose.yaml up
-```
-
-Run in detached mode: (Recommended)
-
-```bash
-docker compose -f docker-compose.yaml up -d
-```
-
-#### 4. Create `.env` File
+Create the environment file **before starting Docker**.
 
 **macOS / Linux**
-
 ```bash
-echo 'OPENAI_API_KEY="..."' > .env
+touch .env
 ```
 
 **Windows (PowerShell)**
-
 ```powershell
-Set-Content -Path .env -Value 'OPENAI_API_KEY="..."'
+New-Item .env
 ```
 
-**Windows (Command Prompt)**
+Add the required variables:
 
-```cmd
-echo OPENAI_API_KEY="..." > .env
+```env
+OPENAI_API_KEY=your_key
+ELASTICSEARCH_URL=http://localhost:9200
+OLLAMA_URL=http://localhost:11434
+```
+
+---
+
+### 3. Run Docker Compose (Recommended)
+
+Build and start all services:
+
+```bash
+docker compose up --build
+```
+
+Run in detached mode:
+
+```bash
+docker compose up -d --build
+```
+
+Stop services:
+
+```bash
+docker compose down
+```
+
+Remove volumes as well:
+
+```bash
+docker compose down -v
+```
+
+---
+
+#### Services Started
+
+Docker Compose will automatically start:
+
+- FastAPI backend
+- Next.js frontend (built during image creation)
+- Elasticsearch
+- Ollama (with model pull on startup)
+
+---
+
+### 4. Access the Application
+
+**API:**
+```
+http://localhost:8000
+```
+
+**Elasticsearch:**
+```
+http://localhost:9200
+```
+
+---
+
+### Optional: Run Locally Without Docker
+
+Using **conda**:
+
+```bash
+conda create -n mini-rag python=3.12
+conda activate mini-rag
+pip install -r requirements.txt
+python main.py cli
+```
+
+Using **venv**:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+python main.py cli
+```
+
+### Optional: Run Frontend Locally
+
+Make sure you have **Bun** installed:
+
+https://bun.sh
+
+Then:
+
+```bash
+cd frontend
+bun install
+bun run dev
+```
+
+Frontend will be available at:
+
+```
+http://localhost:3000
 ```
 
 ## Modes
@@ -427,7 +494,6 @@ pre-commit run --all-files
 | **Backend**            | Python 3.11 | Agent logic, LangChain/LlamaIndex orchestration      |
 | **Frontend**           | Next.js | Modern web interface for the agent chat              |
 | **Legacy Search**      | TF-IDF | Basic keyword frequency analysis for comparison      |
-| **Hugg**               | Kibana 9.2.4 | Data visualization and index management              |
 | **Monitoring**         | Kibana 9.2.4 | Data visualization and index management              |
 
 
