@@ -14,7 +14,7 @@ orchestrator = Orchestrator()
 @router.get("/health")
 def health():
     """
-    Health check endpoint to verify that the API is running.
+    Health check endpoint to verify that the API and its external dependencies are running.
 
     Returns:
         dict: Status of the service, e.g., {"status": "ok"}.

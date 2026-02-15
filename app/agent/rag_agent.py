@@ -1,13 +1,13 @@
 import re
-import uuid
 import json
+import uuid
 import time
 from dataclasses import dataclass, field
 from typing import Tuple, Set, List, Any, Dict, Callable, Optional
 from pydantic import BaseModel
 from app.config.logger import get_logger
 from app.utils.helpers import stream_print
-from app.model.chat_client import ChatClient, ChatMessage
+from app.model.chat_client import ChatClient, ChatMessage, LlmModel
 from app.retrieval.embedder import Embedder
 from app.retrieval.indexer import ElasticsearchIndex
 from app.retrieval.ranker import TfidfRetriever
@@ -26,9 +26,16 @@ class AgentResult(BaseModel):
     citations: List[Any] = []
 
 
+def _json_default(obj):
+    if isinstance(obj, set):
+        return list(obj)
+    raise TypeError(f"Type {type(obj)} not serializable")
+
+
 @dataclass
 class State:
     trace_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    model: str = ""
     question: str = ""
     response: Optional[str] = None
     citations: Set[Any] = field(default_factory=set)
@@ -36,8 +43,11 @@ class State:
     plan: Dict[str, Any] = field(default_factory=dict)
     retrieval: List[str] = field(default_factory=list)
     latency_ms: Dict[str, float] = field(default_factory=dict)
-    tokens: Dict[str, Any] = field(default_factory=dict)
+    tokens: Dict[str, dict] = field(default_factory=dict)
     errors: List[str] = field(default_factory=list)
+
+    def to_json(self):
+        return json.dumps(self.__dict__, default=_json_default, ensure_ascii=False)
 
 
 @dataclass
@@ -57,6 +67,7 @@ class RAGAgent:
         retriever: ElasticsearchIndex,
         fallback_retriever: TfidfRetriever,
         chat_client: ChatClient,
+        model: LlmModel,
         is_cli: bool,
     ):
         """
@@ -73,6 +84,7 @@ class RAGAgent:
         self.retriever = retriever
         self.fallback_retriever = fallback_retriever
         self.chat_client = chat_client
+        self.model = model
         self.is_cli = is_cli
 
         step_function = Callable[[Context, State, Dict[str, Any]], None]
@@ -87,7 +99,25 @@ class RAGAgent:
     def run(
         self, question: str, messages: List[ChatMessage], top_k: int
     ) -> AgentResult:
-        state = State(question=question)
+        """
+        Execute the full agent pipeline for a user question.
+
+        This method orchestrates the end-to-end workflow by generating a plan,
+        executing each registered step in order, and returning the final
+        response along with citations and execution metadata.
+
+        Args:
+            question (str): The user's input question.
+            messages (List[ChatMessage]): Recent conversation history used
+                for rewriting, retrieval, and drafting.
+            top_k (int): Optional retrieval override specifying the maximum
+                number of chunks to fetch.
+
+        Returns:
+            AgentResult: Contains the generated answer, supporting citations,
+            and the execution log with steps, tokens, errors, and latency.
+        """
+        state = State(question=question, model=self.model.value)
         context = Context(question=question, messages=messages)
         directions = {"user_top_k": top_k} if top_k > 1 else {}
         start_time = time.perf_counter()
@@ -110,7 +140,7 @@ class RAGAgent:
             if self.is_cli and context.response:
                 stream_print(context.response)
 
-            logger.debug(state)
+            logger.debug(state.to_json())
             return AgentResult(
                 answer=context.response,
                 citations=context.citations,
@@ -120,13 +150,13 @@ class RAGAgent:
             logger.error(str(e))
             state.errors.append(str(e))
             state.latency_ms["total"] = self._calc_ms(start_time)
-            logger.debug(state)
+            logger.debug(state.to_json())
             return AgentResult(
                 answer="I'm sorry, I ran into a technical glitch. Please try asking again in a moment.",
                 citations=[],
             )
 
-    def _generate_plan(self, question: str) -> dict:
+    def _generate_plan(self, question: str) -> Tuple[dict, dict]:
         """
         Generate a plan for the question using the chat client.
 
@@ -136,7 +166,7 @@ class RAGAgent:
         Returns:
             dict: Planning options, including top_k, retrieval strategy, and fallback thresholds.
         """
-        plan_json = self.chat_client.chat(
+        chat_response = self.chat_client.chat(
             [
                 {
                     "role": "system",
@@ -145,11 +175,12 @@ class RAGAgent:
                 {"role": "user", "content": [{"text": USER_PROMPT_PLANNER + question}]},
             ]
         )
-        plan = self._parse_plan_options(plan_json)
-        print(f"Generated plan response: {plan}")
-        return plan
+        plan = self._parse_plan_options(chat_response.response)
+        return plan, chat_response.tokens.__dict__
 
-    def _rewrite_question(self, messages: list[ChatMessage], style: str):
+    def _rewrite_question(
+        self, messages: list[ChatMessage], style: str
+    ) -> Tuple[str, dict]:
         """
         Rewrite a question based on previous messages to improve retrieval or LLM performance.
 
@@ -168,7 +199,7 @@ class RAGAgent:
             question += f"- {message.get('content')[0].get('text')}\n"
         question += f"Please rewrite using the following style: {style}"
 
-        response = self.chat_client.chat(
+        chat_response = self.chat_client.chat(
             [
                 {
                     "role": "system",
@@ -177,7 +208,7 @@ class RAGAgent:
                 {"role": "user", "content": [{"text": question}]},
             ]
         )
-        return response
+        return chat_response.response, chat_response.tokens.__dict__
 
     def _retrieve_chunks(
         self, question: str, strategy: str, top_k: int, fallback_threshold: float
@@ -204,7 +235,7 @@ class RAGAgent:
 
     def _draft_response(
         self, messages: list[ChatMessage], question: str, chunks: list, style: str
-    ) -> Tuple[str, Set]:
+    ) -> Tuple[str, dict, Set]:
         """
         Generate the final answer using the LLM and retrieved chunks.
 
@@ -226,9 +257,9 @@ class RAGAgent:
                 {"role": "user", "content": [{"text": prompt}]},
             ]
         )
-        response = self.chat_client.chat(messages, stream=self.is_cli)
-        citations = self._extract_citations(response)
-        return response, citations
+        chat_response = self.chat_client.chat(messages, stream=self.is_cli)
+        citations = self._extract_citations(chat_response.response)
+        return chat_response.response, chat_response.tokens.__dict__, citations
 
     def _step_plan(self, context: Context, state: State, direction: dict):
         """
@@ -237,7 +268,8 @@ class RAGAgent:
         """
         s_start = time.perf_counter()
         try:
-            plan = self._generate_plan(context.question)
+            plan, tokens = self._generate_plan(context.question)
+            state.tokens["plan"] = tokens
 
             # Inject user_top_k if provided
             user_top_k = getattr(direction, "user_top_k", None)
@@ -258,6 +290,17 @@ class RAGAgent:
             state.latency_ms["plan"] = self._calc_ms(s_start)
 
     def _step_answer(self, context: Context, state: State, step: dict):
+        """
+        Populate the quick response directly from the pipeline step.
+
+        This step bypasses generation and assigns a precomputed response
+        from the step configuration to both the runtime context and state.
+
+        Args:
+            context (Context): Execution context holding the current response.
+            state (State): Pipeline state used for tracking outputs and latency.
+            step (dict): Step configuration containing the "response" key.
+        """
         s_start = time.perf_counter()
         try:
             context.response = step["response"]
@@ -266,18 +309,43 @@ class RAGAgent:
             state.latency_ms["answer"] = self._calc_ms(s_start)
 
     def _step_rewrite(self, context: Context, state: State, step: dict):
+        """
+        Rewrite the user's question to improve retrieval quality.
+
+        Uses the conversation history and a configured rewrite style
+        to produce a clearer or more retrieval-friendly query.
+
+        Args:
+            context (Context): Execution context containing messages and question.
+            state (State): Pipeline state for token usage, errors, and latency.
+            step (dict): Step configuration containing the rewrite "style".
+        """
         s_start = time.perf_counter()
         try:
-            context.question = self._rewrite_question(
+            context.question, tokens = self._rewrite_question(
                 messages=context.messages,
                 style=step["style"],
             )
+            state.tokens["rewrite"] = tokens
         except Exception as e:
             state.errors.append(f"rewrite: {str(e)}")
         finally:
             state.latency_ms["rewrite"] = self._calc_ms(s_start)
 
     def _step_retrieve(self, context: Context, state: State, step: dict):
+        """
+        Retrieve relevant document chunks for the current question.
+
+        Supports an optional user-defined `top_k` override. When provided,
+        the retrieval strategy is forced to `vector+tfidf_fallback` with a
+        default fallback threshold to improve recall.
+
+        Args:
+            context (Context): Execution context containing the rewritten question.
+            state (State): Pipeline state for retrieval metadata, errors, and latency.
+            step (dict): Step configuration including strategy, top_k,
+                         fallback_threshold, and optional user_top_k.
+        """
         s_start = time.perf_counter()
         try:
             # Override if user provided top_k ---
@@ -313,11 +381,22 @@ class RAGAgent:
             state.latency_ms["retrieve"] = self._calc_ms(s_start)
 
     def _step_draft(self, context: Context, state: State, step: dict):
+        """
+        Generate a draft response using retrieved context.
+
+        Builds the answer from the most recent conversation messages,
+        the rewritten question, and retrieved document chunks.
+
+        Args:
+            context (Context): Execution context containing messages, question, and retrieved chunks.
+            state (State): Pipeline state for response data, citations,token usage, errors, and latency.
+            step (dict): Step configuration containing the drafting "style".
+        """
         s_start = time.perf_counter()
         try:
             last_messages = context.messages[-6:]
 
-            response, citations = self._draft_response(
+            response, tokens, citations = self._draft_response(
                 messages=last_messages,
                 question=context.question,
                 chunks=context.chunks,
@@ -328,6 +407,7 @@ class RAGAgent:
             context.citations = citations
             state.response = response
             state.citations = citations
+            state.tokens["draft"] = tokens
 
         except Exception as e:
             state.errors.append(f"draft: {str(e)}")

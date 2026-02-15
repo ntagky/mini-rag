@@ -124,6 +124,11 @@ Use:
 KEYWORDS:
 Generate up to 3 short keywords for analytics.
 
+POSSIBLE PLANS:
+a. retrieve -> draft
+a. rewrite -> retrieve -> draft
+b. answer
+
 Return a JSON object with this exact structure:
 
 {

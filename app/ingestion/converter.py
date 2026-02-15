@@ -160,8 +160,8 @@ class PdfToMarkdownConverter:
 
                         new_text = result.document.add_text(
                             label=DocItemLabel.TEXT,
-                            orig=response,
-                            text=response,
+                            orig=response.response,
+                            text=response.response,
                             prov=item.prov[0],
                         )
                         replacements.append((item, new_text))

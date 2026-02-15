@@ -134,6 +134,7 @@ class Orchestrator:
             self.elastic_index,
             TfidfRetriever(),
             self.chat_client[model.value],
+            model,
             is_cli,
         )
         result: AgentResult = agent.run(question, messages, top_k)
