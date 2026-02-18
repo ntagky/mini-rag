@@ -124,6 +124,10 @@ class Orchestrator:
         Returns:
             Tuple[str, List]: Generated answer and its associated citations.
         """
+        if not self.tfidf_rank.exists() or not self.sql_db.exists():
+            logger.info("No ingested files detected. Please run: 'ingest'.")
+            return "No ingested files detected.", []
+
         # Create a message chain if its empty
         if len(messages) == 0:
             messages = [ChatMessage(role="user", content=[ChatContent(text=question)])]

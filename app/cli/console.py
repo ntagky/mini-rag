@@ -70,7 +70,7 @@ def runner():
                         option = parts[idx + 1]
                         if option == LlmModel.OLLAMA.value:
                             model = LlmModel.OLLAMA
-                            # Remove from parts
+                        # Remove from parts
                         parts.pop(idx)
                         parts.pop(idx)
                     except (IndexError, ValueError):

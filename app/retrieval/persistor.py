@@ -154,3 +154,12 @@ class SqliteDb:
         with self._connect() as conn:
             conn.execute("DELETE FROM ingested_files;")
             logger.debug("Deleted all items from SQL db.")
+
+    def exists(self) -> bool:
+        """
+        Check if the SQLite database file exists.
+
+        Returns:
+            bool: True if the database file exists, False otherwise.
+        """
+        return self.db_path.exists()
