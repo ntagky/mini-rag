@@ -35,6 +35,17 @@ def get_models():
     return [model.value for model in LlmModel]
 
 
+@router.post("/api/v1/ingest")
+def ingest_files(reset: bool = False):
+    """
+    Ingests unprocessed corpus.
+
+    Returns:
+        int: Number of new documents ingested.
+    """
+    return orchestrator.ingest_corpus(reset=reset)
+
+
 @router.post("/api/v1/chat")
 async def query(request: QueryRequest):
     """

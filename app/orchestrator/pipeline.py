@@ -124,8 +124,12 @@ class Orchestrator:
         Returns:
             Tuple[str, List]: Generated answer and its associated citations.
         """
-        if not self.tfidf_rank.exists() or not self.sql_db.exists():
-            logger.info("No ingested files detected. Please run: 'ingest'.")
+        if (
+            not self.tfidf_rank.exists()
+            or not self.sql_db.exists()
+            or not TfidfRetriever.exists()
+        ):
+            logger.info("No ingested files detected. Please run the ingestion first.")
             return "No ingested files detected.", []
 
         # Create a message chain if its empty

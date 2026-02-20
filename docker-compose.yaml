@@ -59,6 +59,7 @@ services:
       - ELASTICSEARCH_URL=http://elasticsearch:9200
       - OLLAMA_URL=http://ollama:11434
     volumes:
+      - documents:/.documents
       - db_data:/.db
       - local_models:/.local_models
     restart: unless-stopped
@@ -69,5 +70,6 @@ services:
 volumes:
   es_data:
   ollama_data:
+  documents:
   db_data:
   local_models:
