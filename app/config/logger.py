@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 from datetime import datetime
 from platform import platform, python_version
-from .configer import LOG_DIR
+from app.config.configer import LOG_DIR
 
 
 _RUN_ID = str(uuid.uuid4())

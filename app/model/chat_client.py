@@ -1,3 +1,4 @@
+import os
 import ollama
 from enum import Enum
 from openai import OpenAI
@@ -6,16 +7,16 @@ from abc import ABC, abstractmethod
 from typing import Literal, cast
 from typing_extensions import TypedDict
 from dataclasses import dataclass
+from ollama._types import ChatResponse as OllamaChatResponse
 from openai.types.chat import (
     ChatCompletionUserMessageParam,
     ChatCompletionSystemMessageParam,
     ChatCompletionAssistantMessageParam,
     ChatCompletionContentPartImageParam,
 )
-from ..config.logger import get_logger
-from ..config.configer import (
-    OLLAMA_BASE_URL,
-    OPENAI_API_KEY,
+from openai.types.completion_usage import CompletionUsage
+from app.config.logger import get_logger
+from app.config.configer import (
     OPENAI_EMBEDDING_MODEL,
     OPENAI_COMPLETION_MODEL,
     OLLAMA_CHAT_MODEL,
@@ -50,6 +51,19 @@ class ChatMessage(TypedDict):
     content: List[ChatContent]
 
 
+@dataclass
+class UsageTokens:
+    prompt_tokens: int
+    response_tokens: int
+    total_tokens: int
+
+
+@dataclass
+class ChatResponse:
+    response: str
+    tokens: UsageTokens
+
+
 class LlmModel(Enum):
     OPENAI = "openai"
     OLLAMA = "ollama"
@@ -73,7 +87,7 @@ DEFAULT_LLM_MODEL = LlmModel.OPENAI
 
 class BaseLLM(ABC):
     @abstractmethod
-    def chat(self, messages: List[ChatMessage]) -> str:
+    def chat(self, messages: List[ChatMessage]) -> ChatResponse:
         """
         Abstract method to generate a response from the LLM given messages.
 
@@ -81,12 +95,12 @@ class BaseLLM(ABC):
             messages (List[ChatMessage]): List of messages to send to the model.
 
         Returns:
-            str: Generated response text from the model.
+            ChatResponse: Generated response text from the model with the usage tokens.
         """
         pass
 
     @abstractmethod
-    def chat_streaming(self, messages: List[ChatMessage]) -> str:
+    def chat_streaming(self, messages: List[ChatMessage]) -> ChatResponse:
         """
         Abstract method to generate a streaming response from the LLM.
 
@@ -94,7 +108,7 @@ class BaseLLM(ABC):
             messages (List[ChatMessage]): List of messages to send to the model.
 
         Returns:
-            str: Generated response text from the model.
+            ChatResponse: Generated response text from the model with the usage tokens.
         """
         pass
 
@@ -115,7 +129,7 @@ class ChatClient:
         else:
             self.llm_model = OllamaLLM(temperature=temperature)
 
-    def chat(self, messages: List[ChatMessage], stream: bool = False) -> str:
+    def chat(self, messages: List[ChatMessage], stream: bool = False) -> ChatResponse:
         """
         Send messages to the LLM and receive a response.
 
@@ -124,7 +138,7 @@ class ChatClient:
             stream (bool, optional): Whether to stream the response. Defaults to False.
 
         Returns:
-            str: Generated response text.
+            ChatResponse: Generated response text from the model with the usage tokens.
         """
         if stream:
             return self.llm_model.chat_streaming(messages)
@@ -140,10 +154,10 @@ class OllamaLLM(BaseLLM):
             temperature (float, optional): Temperature setting for generation. Defaults to 0.0.
         """
         self.model = OLLAMA_CHAT_MODEL
-        self.base_url = OLLAMA_BASE_URL
+        self.base_url = os.getenv("OLLAMA_URL")
         self.temperature = temperature
 
-    def chat(self, messages: list[ChatMessage]) -> str:
+    def chat(self, messages: list[ChatMessage]) -> ChatResponse:
         """
         Generate a response from Ollama LLM for a list of messages.
 
@@ -151,7 +165,7 @@ class OllamaLLM(BaseLLM):
             messages (List[ChatMessage]): Messages to send to the LLM.
 
         Returns:
-            str: Generated response text.
+            ChatResponse: Generated response text from the model with the usage tokens.
         """
         ollama_messages = self._to_ollama_messages(messages)
 
@@ -163,9 +177,17 @@ class OllamaLLM(BaseLLM):
             },
         )
 
-        return response["message"]["content"]
+        chat_response = ChatResponse(
+            response=response["message"]["content"],
+            tokens=UsageTokens(
+                prompt_tokens=response.prompt_eval_count,
+                response_tokens=response.eval_count,
+                total_tokens=response.prompt_eval_count + response.eval_count,
+            ),
+        )
+        return chat_response
 
-    def chat_streaming(self, messages: List[ChatMessage]) -> str:
+    def chat_streaming(self, messages: List[ChatMessage]) -> ChatResponse:
         """
         Generate a streaming response from Ollama LLM and print tokens as they arrive.
 
@@ -173,7 +195,7 @@ class OllamaLLM(BaseLLM):
             messages (List[ChatMessage]): Messages to send to the LLM.
 
         Returns:
-            str: Generated response text.
+            ChatResponse: Generated response text from the model with the usage tokens.
         """
         ollama_messages = self._to_ollama_messages(messages)
 
@@ -187,17 +209,24 @@ class OllamaLLM(BaseLLM):
         )
 
         full_response = []
-
+        last_chunk: OllamaChatResponse | None = None
         for chunk in stream:
             token = chunk["message"].get("content", "")
             if token:
                 full_response.append(token)
                 print(token, end="", flush=True)
+            last_chunk = chunk
         print()
 
+        assert type(last_chunk) is OllamaChatResponse
+        usage_tokens = UsageTokens(
+            prompt_tokens=last_chunk.prompt_eval_count,
+            response_tokens=last_chunk.eval_count,
+            total_tokens=last_chunk.prompt_eval_count + last_chunk.eval_count,
+        )
         response = "".join(full_response)
-        _log_response(self.model, response)
-        return response
+        _log_response(self.model, response, usage_tokens)
+        return ChatResponse(response=response, tokens=usage_tokens)
 
     @staticmethod
     def _to_ollama_messages(messages: list[ChatMessage]) -> List[OllamaMessage]:
@@ -246,9 +275,9 @@ class OpenAILLM(BaseLLM):
         self.model = OPENAI_COMPLETION_MODEL
 
         self.temperature = temperature
-        self.client = OpenAI(api_key=OPENAI_API_KEY)
+        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-    def chat(self, messages: List[ChatMessage]) -> str:
+    def chat(self, messages: List[ChatMessage]) -> ChatResponse:
         """
         Generate a response from OpenAI LLM for a list of messages.
 
@@ -256,7 +285,7 @@ class OpenAILLM(BaseLLM):
             messages (List[ChatMessage]): Messages to send to the LLM.
 
         Returns:
-            str: Generated response text.
+            ChatResponse: Generated response text from the model with the usage tokens.
         """
         openai_messages = self._to_openai_messages(messages)
 
@@ -264,9 +293,17 @@ class OpenAILLM(BaseLLM):
             model=self.model, messages=openai_messages, max_tokens=4096
         )
 
-        return response.choices[0].message.content
+        chat_response = ChatResponse(
+            response=response.choices[0].message.content,
+            tokens=UsageTokens(
+                prompt_tokens=response.usage.prompt_tokens,
+                response_tokens=response.usage.completion_tokens,
+                total_tokens=response.usage.total_tokens,
+            ),
+        )
+        return chat_response
 
-    def chat_streaming(self, messages: List[ChatMessage]) -> str:
+    def chat_streaming(self, messages: List[ChatMessage]) -> ChatResponse:
         """
         Generate a streaming response from OpenAI LLM and print tokens as they arrive.
 
@@ -274,7 +311,7 @@ class OpenAILLM(BaseLLM):
             messages (List[ChatMessage]): Messages to send to the LLM.
 
         Returns:
-            str: Generated response text.
+            ChatResponse: Generated response text from the model with the usage tokens.
         """
         openai_messages = self._to_openai_messages(messages)
 
@@ -287,6 +324,7 @@ class OpenAILLM(BaseLLM):
         )
 
         full_response = []
+        last_usage: CompletionUsage | None = None
         for chunk in stream:
             if len(chunk.choices) > 0:
                 delta = chunk.choices[0].delta
@@ -294,11 +332,17 @@ class OpenAILLM(BaseLLM):
                     token = delta.content
                     full_response.append(token)
                     print(token, end="", flush=True)
-        print()
+            last_usage = chunk.usage
 
+        assert type(last_usage) is CompletionUsage
+        usage_tokens = UsageTokens(
+            prompt_tokens=last_usage.prompt_tokens,
+            response_tokens=last_usage.completion_tokens,
+            total_tokens=last_usage.total_tokens,
+        )
         response = "".join(full_response)
-        _log_response(self.model, response)
-        return response
+        _log_response(self.model, response, usage_tokens)
+        return ChatResponse(response=response, tokens=usage_tokens)
 
     @staticmethod
     def _to_openai_messages(messages: list[ChatMessage]) -> List[OpenAIMessage]:
@@ -354,15 +398,22 @@ class OpenAILLM(BaseLLM):
         return arr
 
 
-def _log_response(model: str, response: str):
+def _log_response(model: str, response: str, tokens: UsageTokens):
     """
     Log the LLM response to the debug logger in structured JSON format.
 
     Args:
         model (str): Name of the model generating the response.
         response (str): The generated response text.
+        tokens (UsageTokens): Usage tokens retrieved from the model response
     """
     logger.debug(
         f"{model} completed response",
-        extra={"extra": {"event": "llm_response", "response": response}},
+        extra={
+            "extra": {
+                "event": "llm_response",
+                "response": response,
+                "tokens": tokens.__dict__,
+            }
+        },
     )

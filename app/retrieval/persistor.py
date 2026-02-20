@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel
 from datetime import datetime
-from ..config.logger import get_logger
-from ..config.configer import SQLITE_DIR
+from app.config.logger import get_logger
+from app.config.configer import SQLITE_DIR
 
 logger = get_logger("mini-rag." + __name__)
 
@@ -154,3 +154,12 @@ class SqliteDb:
         with self._connect() as conn:
             conn.execute("DELETE FROM ingested_files;")
             logger.debug("Deleted all items from SQL db.")
+
+    def exists(self) -> bool:
+        """
+        Check if the SQLite database file exists.
+
+        Returns:
+            bool: True if the database file exists, False otherwise.
+        """
+        return self.db_path.exists()

@@ -18,63 +18,130 @@ A fully local Retrieval-Augmented Generation (RAG) application for ingesting doc
 
 ## Quick Start
 
-#### 1. Clone Repository
+### 1. Clone Repository
 
 ```bash
 git clone https://github.com/ntagky/mini-rag.git
 cd mini-rag
 ```
 
-#### 2. Create Environment
+---
 
-Using conda:
+### 2. Create `.env` File
 
-```bash
-conda create -n mini-rag python=3.11
-conda activate mini-rag
-pip install -r requirements.txt
-```
-
-Using venv:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-#### 3. Run Docker Compose
-
-Start the services:
-
-```bash
-docker compose -f docker-compose.yaml up
-```
-
-Run in detached mode: (Recommended)
-
-```bash
-docker compose -f docker-compose.yaml up -d
-```
-
-#### 4. Create `.env` File
+Create the environment file **before starting Docker**.
 
 **macOS / Linux**
-
 ```bash
-echo 'OPENAI_API_KEY="..."' > .env
+touch .env
 ```
 
 **Windows (PowerShell)**
-
 ```powershell
-Set-Content -Path .env -Value 'OPENAI_API_KEY="..."'
+New-Item .env
 ```
 
-**Windows (Command Prompt)**
+Add the required variables:
 
-```cmd
-echo OPENAI_API_KEY="..." > .env
+```env
+OPENAI_API_KEY=your_key
+ELASTICSEARCH_URL=http://localhost:9200
+OLLAMA_URL=http://localhost:11434
+```
+
+---
+
+### 3. Run Docker Compose (Recommended)
+
+Build and start all services:
+
+```bash
+docker compose up --build
+```
+
+Run in detached mode:
+
+```bash
+docker compose up -d --build
+```
+
+Stop services:
+
+```bash
+docker compose down
+```
+
+Remove volumes as well:
+
+```bash
+docker compose down -v
+```
+
+---
+
+#### Services Started
+
+Docker Compose will automatically start:
+
+- FastAPI backend
+- Next.js frontend (built during image creation)
+- Elasticsearch
+- Ollama (with model pull on startup)
+
+---
+
+### 4. Access the Application
+
+**API:**
+```
+http://localhost:8000
+```
+
+**Elasticsearch:**
+```
+http://localhost:9200
+```
+
+---
+
+### Optional: Run Locally Without Docker
+
+Using **conda**:
+
+```bash
+conda create -n mini-rag python=3.12
+conda activate mini-rag
+pip install -r requirements.txt
+python main.py cli
+```
+
+Using **venv**:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+python main.py cli
+```
+
+### Optional: Run Frontend Locally
+
+Make sure you have **Bun** installed:
+
+https://bun.sh
+
+Then:
+
+```bash
+cd frontend
+bun install
+bun run dev
+```
+
+Frontend will be available at:
+
+```
+http://localhost:3000
 ```
 
 ## Modes
@@ -90,18 +157,30 @@ The application supports two execution modes:
 
 Runs as an interactive loop in the terminal with four available commands for managing ingestion and querying.
 
-![CLI Modes](.assets/screenshots/screenshot-modes.png)
+![CLI Mode](.assets/screenshots/screenshot-cli-mode.png)
 
-#### 1. ```ingest [--reset]```
+#### 1. ```doctor```
+Performs a quick environment health check to ensure the system is ready to run.
+
+Validates:
+
+- `.env` file and required variables
+- **OpenAI** connectivity
+- **Elasticsearch** reachability
+- **Ollama** availability
+
+Returns a clear pass/fail status with diagnostics for any failing service.
+
+#### 2. ```ingest [--reset]```
 The system performs a full-scale ingestion of the local corpus by using Docling OCR and vision-capable GPT models to extract data, which is then deduplicated via an SQLite registry and chunked for processing. Finally, it creates a robust search layer by storing vector embeddings in Elasticsearch alongside a TF-IDF index for hybrid fallback retrieval.
 
-#### 2. ```query <your question> [--top-k N] [--model openai|ollama]```
+#### 3. ```query <your question> [--top-k N] [--model openai|ollama]```
 Retrieves the top N documents from Elasticsearch and uses the agent with the corresponding model to answer based strictly on the corpus.
 
-#### 3. ```chat [--model openai|ollama]```
+#### 4. ```chat [--model openai|ollama]```
 Starts a REPL session with short-term memory. The agent maintains context across multiple turns using the SQLite session store.
 
-#### 4. ```exit```
+#### 5. ```exit```
 Gracefully terminates the Python session.
 
 ![CLI Mode - 1](.assets/screenshots/screenshot-cli-1.png)
@@ -109,10 +188,10 @@ Gracefully terminates the Python session.
 
 ### API Mode
 The system exposes a RESTful interface for remote integration, allowing external clients to manage models and engage in stateful conversations.
-![API Mode - 1](.assets/screenshots/screenshot-api-1.png)
+![API Mode](.assets/screenshots/screenshot-api-mode.png)
 
 #### 1. ```/health```
-Returns the status of the service.
+Verify that the API and its external dependencies are running.
 #### 2. ```/api/v1/models```
 Lists all available local (Ollama) and remote (OpenAI) models currently configured.
 #### 3. ```/api/v1/chat```
@@ -122,7 +201,7 @@ Handles conversation logic by passing the message history directly in the reques
 
 First Run & VPN: The BAAI/bge-base-en-v1.5 model must be downloaded from HuggingFace on the first run; if the download fails due to VPN restrictions, disable the VPN briefly to allow the model to cache locally.
 
-Performance & Metrics: Tests were conducted using OpenAI because Ollama ran slowly on the local machine, which is also why token usage data is currently omitted from responses.
+Performance & Metrics: Tests were conducted using OpenAI because Ollama ran slowly on the local machine.
 
 ## Requests and Responses
 
@@ -130,146 +209,188 @@ Performance & Metrics: Tests were conducted using OpenAI because Ollama ran slow
 #### A.
 ```bash
 $ python main.py cli
-...
-> query hello, how are you?
-Hello! I am here to help you with any questions you have.
 ```
+> **query** hello, how are you?
+
+> *Hello! I am here to help you with any questions you have.*
+
 ```json
 {
-    "trace_id": "5c138061-677c-440e-a5c5-63d10fc0fe19",
-    "question": "hello, how are you?",
+  "trace_id": "a2165674-2ac7-4d38-b910-dbb2481cbdec",
+  "model": "openai",
+  "question": "hello, how are you?",
+  "response": "Hello! I'm here to help you with any questions you have.",
+  "citations": [],
+  "steps": [
+    "plan",
+    "answer"
+  ],
+  "plan": {
     "steps": [
-      "plan",
-      "answer"
+      {
+        "name": "answer",
+        "response": "Hello! I'm here to help you with any questions you have."
+      }
     ],
-    "directions": {
-      "quick_answer": "Hello! I am here to help you with any questions you have.",
-      "retrieval_strategy": "vector_only",
-      "top_k": 5,
-      "draft_style": "concise",
-      "citation_style": "footnotes",
-      "fallback_threshold": 0.0,
-      "query_rewriting": false,
-      "keywords": [
-        "greeting",
-        "salutation",
-        "casual"
-      ]
-    },
-    "retrieval": [],
-    "latency_ms": {
-      "plan": 2279
-    },
-    "tokens": {},
-    "errors": [],
-    "answer": "Hello! I am here to help you with any questions you have."
+    "keywords": [
+      "greeting"
+    ]
+  },
+  "retrieval": [],
+  "latency_ms": {
+    "plan": 1566,
+    "answer": 0,
+    "total": 1566
+  },
+  "tokens": {
+    "plan": {
+      "prompt_tokens": 499,
+      "response_tokens": 46,
+      "total_tokens": 545
+    }
+  },
+  "errors": []
 }
 ```
 
 #### B.
 ```bash
 $ python main.py cli
-...
-> query What if an employer seeks to enroll employees in a clinical investigation sponsored or conducted by the employer?
-If an employer seeks to enroll employees in a clinical investigation sponsored or conducted by the employer, the clinical investigator and IRB must carefully consider potential conflicts of interest and the voluntary nature of consent. According to FDA regulations and guidance, when financial relationships or interests exist—such as an employer sponsoring a study in which employees are subjects—special considerations should be made to mitigate potential undue influence or coercion. These considerations may include:\n\n- Disclosing the source of funding, financial arrangements, or interests related to the employer as sponsor in the informed consent process.\n- Using special measures to modify the informed consent process to ensure voluntariness, such as involving an independent individual without conflicts of interest to obtain consent.\n- Employing independent monitoring of the consent process to protect the rights and welfare of employee-subjects.\n\nThe IRB holds ultimate responsibility for determining if and how such information should be disclosed and whether additional protections are necessary (see 21 CFR 56.109, 56.111(a)(4)-(5)).\n\nIn summary, employer-sponsored clinical investigations involving employees require enhanced scrutiny regarding financial interests, disclosure, and consent to safeguard against conflicts and ensure voluntary participation.\n\ncite=[ICD - Document 1.pdf+42]
 ```
+> **query** What if an employer seeks to enroll employees in a clinical investigation sponsored or conducted by the employer? **--model openai**
+
+> *If an employer seeks to enroll employees in a clinical investigation sponsored or conducted by the employer, the clinical investigator and IRB must carefully consider potential conflicts of interest and the voluntary nature of consent. According to FDA regulations and guidance, when financial relationships or interests exist—such as an employer sponsoring a study in which employees are subjects—special considerations should be made to mitigate potential undue influence or coercion. These considerations may include:\n\n- Disclosing the source of funding, financial arrangements, or interests related to the employer as sponsor in the informed consent process.\n- Using special measures to modify the informed consent process to ensure voluntariness, such as involving an independent individual without conflicts of interest to obtain consent.\n- Employing independent monitoring of the consent process to protect the rights and welfare of employee-subjects.\n\nThe IRB holds ultimate responsibility for determining if and how such information should be disclosed and whether additional protections are necessary (see 21 CFR 56.109, 56.111(a)(4)-(5)).\n\nIn summary, employer-sponsored clinical investigations involving employees require enhanced scrutiny regarding financial interests, disclosure, and consent to safeguard against conflicts and ensure voluntary participation.\n\ncite=[ICD - Document 1.pdf+42]*
+
 ```json
 {
-    "trace_id": "4880d510-d180-4a38-8f10-a96cda61b017",
-    "question": "What if an employer seeks to enroll employees in a clinical investigation sponsored or conducted by the employer?",
+  "trace_id": "d3096fa6-9205-476f-b992-b8a31393f959",
+  "model": "openai",
+  "question": "What if an employer seeks to enroll employees in a clinical investigation sponsored or conducted by the employer?",
+  "response": "If an employer seeks to enroll employees in a clinical investigation sponsored or conducted by the employer, the informed consent process should include safeguards to ensure that participation is voluntary and that the possibility of undue influence or coercion by supervisors, peers, or others is minimized. The consent process and form should emphasize that participation is truly voluntary. This is to avoid undue influence arising from the employer-employee relationship and to ensure that employees understand that their choice to participate or not will not result in any adverse consequences (21 CFR 50.25(a)(8)) [cite=ICD - Document 1.pdf+12].",
+  "citations": [
+    "cite=ICD - Document 1.pdf+12"
+  ],
+  "steps": [
+    "plan",
+    "retrieve",
+    "draft"
+  ],
+  "plan": {
     "steps": [
-      "plan",
-      "rewriting",
-      "retrieve",
-      "draft"
+      {
+        "name": "retrieve",
+        "strategy": "vector_only",
+        "top_k": 5,
+        "fallback_threshold": 0.25
+      },
+      {
+        "name": "draft",
+        "style": "detailed"
+      }
     ],
-    "directions": {
-      "quick_answer": "",
-      "retrieval_strategy": "vector+tfidf_fallback",
-      "top_k": 5,
-      "draft_style": "detailed",
-      "citation_style": "footnotes",
-      "fallback_threshold": 0.25,
-      "query_rewriting": true,
-      "keywords": [
-        "clinical investigation",
-        "employer",
-        "employee enrollment"
-      ]
-    },
-    "retrieval": [
-      "document-id: ICD - Document 1.pdf, page: 47, chunk-id: def53b75-e478-4aaa-8578-0efabd0fee57, source:Elastic, score:0.85245377",
-      "document-id: ICD - Document 1.pdf, page: 47, chunk-id: cda0cf57-09a1-48d3-aa11-0c8296311724, source:Elastic, score:0.8494981",
-      "document-id: ICD - Document 1.pdf, page: 42, chunk-id: 8556cc39-ce6c-42a7-9e08-55b2b0dfc9aa, source:Elastic, score:0.8454367",
-      "document-id: ICD - Document 1.pdf, page: 50, chunk-id: aec3b26b-1a18-4523-b6c5-880f01a3336d, source:Elastic, score:0.84509987",
-      "document-id: ICD - Document 1.pdf, page: 43, chunk-id: e53acd2d-9efd-4578-820a-041a0aa896f4, source:Elastic, score:0.841667"
-    ],
-    "latency_ms": {
-      "plan": 1556,
-      "retrieve": 440,
-      "draft": 3574,
-      "total": 6562
-    },
-    "tokens": {},
-    "errors": [],
-    "answer": "If an employer seeks to enroll employees in a clinical investigation sponsored or conducted by the employer, the clinical investigator and IRB must carefully consider potential conflicts of interest and the voluntary nature of consent. According to FDA regulations and guidance, when financial relationships or interests exist—such as an employer sponsoring a study in which employees are subjects—special considerations should be made to mitigate potential undue influence or coercion. These considerations may include:\n\n- Disclosing the source of funding, financial arrangements, or interests related to the employer as sponsor in the informed consent process.\n- Using special measures to modify the informed consent process to ensure voluntariness, such as involving an independent individual without conflicts of interest to obtain consent.\n- Employing independent monitoring of the consent process to protect the rights and welfare of employee-subjects.\n\nThe IRB holds ultimate responsibility for determining if and how such information should be disclosed and whether additional protections are necessary (see 21 CFR 56.109, 56.111(a)(4)-(5)).\n\nIn summary, employer-sponsored clinical investigations involving employees require enhanced scrutiny regarding financial interests, disclosure, and consent to safeguard against conflicts and ensure voluntary participation.\n\ncite=[ICD - Document 1.pdf+42]",
-    "citations": [
-      "ICD - Document 1.pdf+42"
+    "keywords": [
+      "employer",
+      "clinical investigation",
+      "enrollment"
     ]
-  }
+  },
+  "retrieval": [
+    "document-id: ICD - Document 1.pdf, page: 50, chunk-id: 6dd92083-a621-4993-8c99-30319009a501, source:Elastic, score:0.83219194",
+    "document-id: ICD - Document 1.pdf, page: 42, chunk-id: f8e3208c-58ac-4f23-9e1b-a3788cf01583, source:Elastic, score:0.82505643",
+    "document-id: ICD - Document 1.pdf, page: 28, chunk-id: c04a92a3-a081-4df6-b406-0eec77132b6a, source:Elastic, score:0.82215124",
+    "document-id: ICD - Document 1.pdf, page: 12, chunk-id: 1069e377-d379-462a-b733-5cb1e8f984d0, source:Elastic, score:0.821601",
+    "document-id: ICD - Document 1.pdf, page: 59, chunk-id: 82bd5344-3e6e-4e0e-8e46-80bd55ece183, source:Elastic, score:0.81845814"
+  ],
+  "latency_ms": {
+    "plan": 1467,
+    "retrieve": 903,
+    "draft": 2141,
+    "total": 4511
+  },
+  "tokens": {
+    "plan": {
+      "prompt_tokens": 512,
+      "response_tokens": 81,
+      "total_tokens": 593
+    },
+    "draft": {
+      "prompt_tokens": 1754,
+      "response_tokens": 121,
+      "total_tokens": 1875
+    }
+  },
+  "errors": []
+}
 ```
 
 #### C.
 ```bash
 $ python main.py cli
-...
-> query What information must consent forms provide regarding medical alternatives and the standard of care for prospective subjects?
-Consent forms must disclose appropriate alternative procedures or courses of treatment that might be advantageous to the subject, including a description of the care the subject would likely receive if they do not participate in the research (21 CFR 50.25(a)(4)). This includes approved therapies for the patient's condition, other forms of therapy (e.g., surgical), diagnosis, and when appropriate, supportive care without disease-directed therapy.\n\nThe disclosure must include a description of the current medically recognized standard of care, especially in studies involving medical products intended to treat or diagnose serious diseases or conditions. The standard of care may include uses or treatment regimens of legally marketed drugs or devices that are not included in the product's approved uses. Information about unapproved uses that are part of the medically recognized standard of care can be provided factually but should not be promotional.\n\nIf there are multiple alternatives, the consent form may state that these will be discussed in more detail by the clinical investigator. Treatment options lacking evidence of therapeutic value should generally not be included. Disclosure should include reasonably foreseeable risks or discomforts and potential benefits associated with these alternatives during the informed consent process, although detailed risk/benefit explanation need not always be in the written consent form.\n\nIt may be appropriate to refer subjects to their primary care provider or another healthcare professional for more complete discussion of alternatives before signing the consent form.\n\nThe person obtaining consent must be able to discuss available alternatives and answer questions from prospective subjects, and consent documents and discussions may need updating if new alternative treatments become available during the trial cite=[ICD - Document 1.pdf+19,20].
 ```
+> **query** What information must consent forms provide regarding medical alternatives and the standard of care for prospective subjects? **--model openai**
+
+> *Consent forms must disclose appropriate alternative procedures or courses of treatment that might be advantageous to the subject, including a description of the care the subject would likely receive if they do not participate in the research (21 CFR 50.25(a)(4)). This includes approved therapies for the patient's condition, other forms of therapy (e.g., surgical), diagnosis, and when appropriate, supportive care without disease-directed therapy.\n\nThe disclosure must include a description of the current medically recognized standard of care, especially in studies involving medical products intended to treat or diagnose serious diseases or conditions. The standard of care may include uses or treatment regimens of legally marketed drugs or devices that are not included in the product's approved uses. Information about unapproved uses that are part of the medically recognized standard of care can be provided factually but should not be promotional.\n\nIf there are multiple alternatives, the consent form may state that these will be discussed in more detail by the clinical investigator. Treatment options lacking evidence of therapeutic value should generally not be included. Disclosure should include reasonably foreseeable risks or discomforts and potential benefits associated with these alternatives during the informed consent process, although detailed risk/benefit explanation need not always be in the written consent form.\n\nIt may be appropriate to refer subjects to their primary care provider or another healthcare professional for more complete discussion of alternatives before signing the consent form.\n\nThe person obtaining consent must be able to discuss available alternatives and answer questions from prospective subjects, and consent documents and discussions may need updating if new alternative treatments become available during the trial cite=[ICD - Document 1.pdf+19,20].*
+
 ```json
 {
-    "trace_id": "6d42e1b4-3121-40e3-9db5-6d942ca7a301",
-    "question": "What information must consent forms provide regarding medical alternatives and the standard of care for prospective subjects?",
+  "trace_id": "01e0d3fe-910c-486c-884f-8763d704ef67",
+  "model": "openai",
+  "question": "What information must consent forms provide regarding medical alternatives and the standard of care for prospective subjects?",
+  "response": "Consent forms must disclose appropriate alternative procedures or courses of treatment that might be advantageous to the subject, including a description of the care they would likely receive if they do not participate in the research. This includes approved therapies for the patient’s disease or condition, other forms of therapy or diagnosis, and supportive care without disease-directed therapy. The consent must describe the current medically recognized standard of care, particularly in studies of medical products for serious diseases or conditions. When describing unapproved uses of approved drugs or devices that are part of the standard of care, factual information may be provided but should not be promotional. Additionally, alternatives should include reasonably foreseeable risks, discomforts, and potential benefits, and discussion of alternatives should be available during the informed consent process, although not all details need to be in the written form. Subjects may be referred to healthcare professionals for more detailed discussions of alternatives before consent is given. (21 CFR 50.25(a)(4)) cite=[ICD - Document 1.pdf+19,20].",
+  "citations": [
+    "ICD - Document 1.pdf+19,20"
+  ],
+  "steps": [
+    "plan",
+    "retrieve",
+    "draft"
+  ],
+  "plan": {
     "steps": [
-      "plan",
-      "rewriting",
-      "retrieve",
-      "draft"
+      {
+        "name": "retrieve",
+        "strategy": "vector+tfidf_fallback",
+        "top_k": 5,
+        "fallback_threshold": 0.25
+      },
+      {
+        "name": "draft",
+        "style": "concise"
+      }
     ],
-    "directions": {
-      "quick_answer": "",
-      "retrieval_strategy": "vector_only",
-      "top_k": 5,
-      "draft_style": "detailed",
-      "citation_style": "footnotes",
-      "fallback_threshold": 0.1,
-      "query_rewriting": true,
-      "keywords": [
-        "consent forms",
-        "medical alternatives",
-        "standard of care"
-      ]
-    },
-    "retrieval": [
-      "document-id: ICD - Document 1.pdf, page: 19, chunk-id: a9d942cc-e02a-4ca4-98c9-c87f0f009d12, source:Elastic, score:0.8825654",
-      "document-id: ICD - Document 1.pdf, page: 20, chunk-id: 50eb592c-6e2e-4f5a-bc37-e93f4b35c077, source:Elastic, score:0.86510485",
-      "document-id: ICD - Document 1.pdf, page: 17, chunk-id: 09b13f4c-a989-47e3-8c69-a3268676f2b1, source:Elastic, score:0.8455529",
-      "document-id: ICD - Document 1.pdf, page: 17, chunk-id: 9e9571cf-6429-44ad-a5ad-5a3b057bbec2, source:Elastic, score:0.8444456",
-      "document-id: ICD - Document 1.pdf, page: 22, chunk-id: 938de88d-e627-4380-89e2-3c23cc842674, source:Elastic, score:0.8437773"
-    ],
-    "latency_ms": {
-      "plan": 1747,
-      "retrieve": 462,
-      "draft": 5330,
-      "total": 8437
-    },
-    "tokens": {},
-    "errors": [],
-    "answer": "Consent forms must disclose appropriate alternative procedures or courses of treatment that might be advantageous to the subject, including a description of the care the subject would likely receive if they do not participate in the research (21 CFR 50.25(a)(4)). This includes approved therapies for the patient's condition, other forms of therapy (e.g., surgical), diagnosis, and when appropriate, supportive care without disease-directed therapy.\n\nThe disclosure must include a description of the current medically recognized standard of care, especially in studies involving medical products intended to treat or diagnose serious diseases or conditions. The standard of care may include uses or treatment regimens of legally marketed drugs or devices that are not included in the product's approved uses. Information about unapproved uses that are part of the medically recognized standard of care can be provided factually but should not be promotional.\n\nIf there are multiple alternatives, the consent form may state that these will be discussed in more detail by the clinical investigator. Treatment options lacking evidence of therapeutic value should generally not be included. Disclosure should include reasonably foreseeable risks or discomforts and potential benefits associated with these alternatives during the informed consent process, although detailed risk/benefit explanation need not always be in the written consent form.\n\nIt may be appropriate to refer subjects to their primary care provider or another healthcare professional for more complete discussion of alternatives before signing the consent form.\n\nThe person obtaining consent must be able to discuss available alternatives and answer questions from prospective subjects, and consent documents and discussions may need updating if new alternative treatments become available during the trial cite=[ICD - Document 1.pdf+19,20].",
-    "citations": [
-      "ICD - Document 1.pdf+19,20"
+    "keywords": [
+      "consent forms",
+      "medical alternatives",
+      "standard of care"
     ]
-  }
+  },
+  "retrieval": [
+    "document-id: ICD - Document 1.pdf, page: 19, chunk-id: f4fcfc08-fc79-4fea-b16c-1fc972ffec99, source:Elastic, score:0.8825378",
+    "document-id: ICD - Document 1.pdf, page: 20, chunk-id: e2864964-3ecb-4459-93f6-f48a1c46be2c, source:Elastic, score:0.86513805",
+    "document-id: ICD - Document 1.pdf, page: 17, chunk-id: 6fb24897-462a-47c3-82e8-b93ac61ed0aa, source:Elastic, score:0.84505796",
+    "document-id: ICD - Document 1.pdf, page: 17, chunk-id: cbdc6317-bd80-4ddc-8df9-7072ae237183, source:Elastic, score:0.84445167",
+    "document-id: ICD - Document 1.pdf, page: 22, chunk-id: f763a0bc-f6e4-4ddc-a5f5-1ef316b5a2a1, source:Elastic, score:0.8437898"
+  ],
+  "latency_ms": {
+    "plan": 1520,
+    "retrieve": 347,
+    "draft": 3183,
+    "total": 5051
+  },
+  "tokens": {
+    "plan": {
+      "prompt_tokens": 511,
+      "response_tokens": 93,
+      "total_tokens": 604
+    },
+    "draft": {
+      "prompt_tokens": 2180,
+      "response_tokens": 203,
+      "total_tokens": 2383
+    }
+  },
+  "errors": []
+}
 ```
 
 ### API Mode
@@ -376,7 +497,7 @@ curl -X 'POST' \
 
 The frontend is a modern Next.js application that serves as the primary user interface for the RAG system. It features a responsive chat interface where users can interact with the agent in real-time. A key feature is the model switcher, allowing users to toggle between OpenAI (GPT-4o-mini) for high-level reasoning and Ollama (Llava:7b) for local or vision-based tasks.
 
-### Setup
+### Non-docker Setup
 
 #### 1. Enter Frontend
 ```bash
@@ -401,8 +522,10 @@ bun --bun run dev
 I have implemented an end-to-end testing suite that validates the entire pipeline. The codebase currently maintains a test coverage of >70%.
 
 ```bash
-pytest --cov=src tests/
+pytest --cov=app/ tests/
 ```
+
+![Test](.assets/screenshots/screenshot-tests.png)
 
 To maintain code integrity, I use pre-commit hooks that automatically run ruff for linting and formatting, mypy for static type checking, and standard safety checks for file structure and size.
 
@@ -410,7 +533,8 @@ To maintain code integrity, I use pre-commit hooks that automatically run ruff f
 pre-commit run --all-files
 ```
 
-![Test](.assets/screenshots/screenshot-tests.png)
+![Maintain](.assets/screenshots/screenshot-precommit.png)
+
 
 ## Stack
 
@@ -427,13 +551,12 @@ pre-commit run --all-files
 | **Backend**            | Python 3.11 | Agent logic, LangChain/LlamaIndex orchestration      |
 | **Frontend**           | Next.js | Modern web interface for the agent chat              |
 | **Legacy Search**      | TF-IDF | Basic keyword frequency analysis for comparison      |
-| **Hugg**               | Kibana 9.2.4 | Data visualization and index management              |
 | **Monitoring**         | Kibana 9.2.4 | Data visualization and index management              |
 
 
 ---
 
 ## Project Walkthrough
-For a live demonstration of the system in action, check out the video below:
+For a live demonstration of the system in action, check out the 3-minute video below:
 
 **[Demo on YouTube](https://youtu.be/k2qB9IycLc8)**

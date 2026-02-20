@@ -77,6 +77,15 @@ class TfidfRank:
 
 
 class TfidfRetriever:
+    REQUIRED_FILES = ["vectorizer.joblib", "matrix.npz", "chunks.json"]
+
+    @classmethod
+    def exists(cls, base_path: Path = TFIDF_DIR) -> bool:
+        """
+        Return True if all required TF-IDF files exist.
+        """
+        return all((base_path / f).exists() for f in cls.REQUIRED_FILES)
+
     def __init__(self, base_path: Path = TFIDF_DIR):
         """
         Load the TF-IDF vectorizer, matrix, and chunk metadata from disk for retrieval.
