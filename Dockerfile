@@ -32,8 +32,6 @@ COPY main.py .
 
 COPY .assets ./.assets
 COPY documents ./documents
-COPY .db ./.db
-COPY .models ./.models
 
 COPY --from=frontend-builder /frontend/out ./frontend/out
 
