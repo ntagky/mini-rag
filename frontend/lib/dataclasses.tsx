@@ -1,3 +1,26 @@
+export type DocumentItem = {
+  id: string
+  filename: string
+  path: string
+  hash: string
+  page_count: number
+  chunk_count: number
+  ingested_at: string
+}
+
+export type IngestionStatusResponse = {
+  status: "idle" | "running" | "completed" | "failed"
+  is_running: boolean
+  started_at: string | null
+  finished_at: string | null
+  error_message: string | null
+}
+
+export type DocumentsResponse = {
+  ingested_files: DocumentItem[]
+  unprocessed_filenames: string[]
+}
+
 export type Response = {
   content: string;
   citations: string[];

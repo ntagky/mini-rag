@@ -75,7 +75,7 @@ class CorpusLoader:
     @staticmethod
     def get_unprocessed_files(
         corpus_files: List[CorpusFile], ingested_files: List[File]
-    ) -> List[str]:
+    ) -> List[CorpusFile]:
         """
         Determine which corpus files have not yet been ingested by comparing hashes with existing database records.
 
@@ -98,7 +98,7 @@ class CorpusLoader:
                     break
 
             if not found:
-                unprocessed.append("/".join([corpus_file.path, corpus_file.filename]))
+                unprocessed.append(corpus_file)
 
         return unprocessed
 

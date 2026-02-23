@@ -63,10 +63,40 @@ class SqliteDb:
                     id VARCHAR(32) PRIMARY KEY,
                     filename TEXT NOT NULL,
                     path TEXT NOT NULL,
-                    hash TEXT NOT NULL UNIQUE,
+                    hash TEXT NOT NULL,
                     page_count INTEGER,
                     chunk_count INTEGER,
                     ingested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS ingestion_control (
+                    id INTEGER PRIMARY KEY CHECK (id = 1),
+                    status TEXT NOT NULL CHECK (status IN ('idle','running','completed','failed')),
+                    started_at TEXT,
+                    finished_at TEXT,
+                    error_message TEXT,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """)
+
+            conn.execute("""
+                INSERT OR IGNORE INTO ingestion_control (
+                    id,
+                    status,
+                    started_at,
+                    finished_at,
+                    error_message,
+                    updated_at
+                )
+                VALUES (
+                    1,
+                    'idle',
+                    NULL,
+                    NULL,
+                    NULL,
+                    CURRENT_TIMESTAMP
                 )
             """)
 
@@ -94,6 +124,59 @@ class SqliteDb:
                     file.chunk_count,
                 ),
             )
+
+    def read_ingestion_control(self):
+        with self._connect() as conn:
+            cursor = conn.execute("""
+                SELECT status, started_at, finished_at, error_message, updated_at
+                FROM ingestion_control
+                WHERE id = 1;
+            """)
+
+            row = cursor.fetchone()
+            return {
+                "status": row[0],
+                "is_running": row[0] == "running",
+                "started_at": row[1],
+                "finished_at": row[2],
+                "error_message": row[3],
+            }
+
+    def update_ingestion_control(self, status: str, error: str | None = None):
+        with self._connect() as conn:
+            if status == "running":
+                conn.execute("""
+                    UPDATE ingestion_control
+                    SET
+                        status = 'running',
+                        started_at = CURRENT_TIMESTAMP,
+                        finished_at = NULL,
+                        error_message = NULL,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = 1
+                """)
+            elif status == "completed":
+                conn.execute("""
+                    UPDATE ingestion_control
+                    SET
+                        status = 'completed',
+                        finished_at = CURRENT_TIMESTAMP,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = 1
+                """)
+            elif status == "failed":
+                conn.execute(
+                    """
+                    UPDATE ingestion_control
+                    SET
+                        status = 'failed',
+                        finished_at = CURRENT_TIMESTAMP,
+                        error_message = ?,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = 1;
+                """,
+                    error,
+                )
 
     def file_exists_by_hash(self, hash: str) -> bool:
         """
@@ -153,6 +236,25 @@ class SqliteDb:
         """
         with self._connect() as conn:
             conn.execute("DELETE FROM ingested_files;")
+            conn.execute("DELETE FROM ingestion_control;")
+            conn.execute("""
+                INSERT OR IGNORE INTO ingestion_control (
+                    id,
+                    status,
+                    started_at,
+                    finished_at,
+                    error_message,
+                    updated_at
+                )
+                VALUES (
+                    1,
+                    'idle',
+                    NULL,
+                    NULL,
+                    NULL,
+                    CURRENT_TIMESTAMP
+                )
+            """)
             logger.debug("Deleted all items from SQL db.")
 
     def exists(self) -> bool:

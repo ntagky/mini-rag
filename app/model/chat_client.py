@@ -116,7 +116,7 @@ class BaseLLM(ABC):
 class ChatClient:
     llm_model: BaseLLM
 
-    def __init__(self, model: LlmModel, temperature: float = 0.0):
+    def __init__(self, model: LlmModel = DEFAULT_LLM_MODEL, temperature: float = 0.0):
         """
         Initialize the chat client with the selected LLM model.
 

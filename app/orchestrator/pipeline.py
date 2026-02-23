@@ -60,11 +60,14 @@ class Orchestrator:
             logger.debug(
                 f"Found {len(unprocessed)} unprocessed file{'s' if len(unprocessed) > 1 else ''}.."
             )
-            documents = self.loader.load_files(set(unprocessed))
+            self.sql_db.update_ingestion_control("running")
+            documents = self.loader.load_files(
+                set(["/".join([file.path, file.filename]) for file in unprocessed])
+            )
 
             output_dir = Path(TMP_IMAGES_DIR)
             output_dir.mkdir(parents=True, exist_ok=True)
-            for corpus_file, document in zip(corpus_files, documents):
+            for file, document in zip(unprocessed, documents):
                 chunks, pages = self.chunker.chunk(document)
                 embeddings = self.embedder.embed(chunks)
 
@@ -86,10 +89,10 @@ class Orchestrator:
                 self.sql_db.create_file(
                     File(
                         id=uuid.uuid4(),
-                        filename=corpus_file.filename,
-                        path=corpus_file.path,
-                        hash=corpus_file.hash,
-                        page_count=corpus_file.pages,
+                        filename=file.filename,
+                        path=file.path,
+                        hash=file.hash,
+                        page_count=file.pages,
                         chunk_count=len(chunks),
                     )
                 )
@@ -98,6 +101,7 @@ class Orchestrator:
             # Recompute TF-IDF matrix
             chunked_data = self.elastic_index.retrieve_all()
             self.tfidf_rank.build(chunked_data)
+            self.sql_db.update_ingestion_control("completed")
             return len(unprocessed)
         else:
             logger.info("Corpus files are up to date.")

@@ -118,3 +118,4 @@ urllib3==2.6.3
 uvicorn==0.40.0
 virtualenv==20.36.1
 xlsxwriter==3.2.9
+python-multipart==0.0.22
