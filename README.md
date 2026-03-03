@@ -516,6 +516,7 @@ bun --bun run dev
 
 ![Frontend Homepage](.assets/screenshots/screenshot-frontend-homepage.png)
 ![Frontend Chat](.assets/screenshots/screenshot-frontend-chat.png)
+![Frontend Documentss](.assets/screenshots/screenshot-frontend-documents.png)
 ![Frontend CLI](.assets/screenshots/screenshot-frontend-cli.png)
 
 ## Testing
@@ -538,20 +539,20 @@ pre-commit run --all-files
 
 ## Stack
 
-| Category               | Technology | Role                                                 |
-|:-----------------------| :--- |:-----------------------------------------------------|
-| **Orchestration**      | Docker Compose | Containerization & environment parity                |
-| **Search Engine**      | Elasticsearch 9.2.4 | Vector Database & similarity retrieval               |
-| **Database (Local)**   | SQLite | Lightweight relational storage for corpus management |
-| **Inference (Local)**  | Ollama (Llava:7b) | Multi-modal (Vision + Text) reasoning                    |
-| **Inference (Cloud)**  | OpenAI GPT-4o-mini | Multi-modal (Vision + Text) reasoning                   |
-| **Data Ingestion**     | Docling (IBM) | Advanced document parsing (PDF/DOCX to Markdown/JSON) |
-| **Embeddings (Local)** | BAAI/BGE-Base-En-v1.5 | High-performance local text vectorization via Sentence Transformers |
+| Category               | Technology             | Role                                                 |
+|:-----------------------|:-----------------------|:-----------------------------------------------------|
+| **Orchestration**      | Docker Compose         | Containerization & environment parity                |
+| **Search Engine**      | Elasticsearch 9.2.4    | Vector Database & similarity retrieval               |
+| **Database (Local)**   | SQLite                 | Lightweight relational storage for corpus management |
+| **Inference (Local)**  | Ollama (Llava:7b)      | Multi-modal (Vision + Text) reasoning                    |
+| **Inference (Cloud)**  | OpenAI GPT-4o-mini     | Multi-modal (Vision + Text) reasoning                   |
+| **Data Ingestion**     | Docling (IBM)          | Advanced document parsing (PDF/DOCX to Markdown/JSON) |
+| **Embeddings (Local)** | BAAI/BGE-Base-En-v1.5  | High-performance local text vectorization via Sentence Transformers |
 | **Embeddings (Cloud)**        | text-embedding-3-small | Generating high-dimensional vector representations   |
-| **Backend**            | Python 3.11 | Agent logic, LangChain/LlamaIndex orchestration      |
-| **Frontend**           | Next.js | Modern web interface for the agent chat              |
-| **Legacy Search**      | TF-IDF | Basic keyword frequency analysis for comparison      |
-| **Monitoring**         | Kibana 9.2.4 | Data visualization and index management              |
+| **Backend**            | Python 3.12            | Agent logic, orchestration      |
+| **Frontend**           | Next.js                | Modern web interface for the agent chat              |
+| **Legacy Search**      | TF-IDF                 | Basic keyword frequency analysis for comparison      |
+| **Monitoring**         | Kibana 9.2.4           | Data visualization and index management              |
 
 
 ---
