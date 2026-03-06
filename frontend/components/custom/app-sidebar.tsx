@@ -6,6 +6,7 @@ import {
   Bot,
   Rocket,
   Settings2,
+  Shredder,
   SquareTerminal,
   Terminal,
 } from "lucide-react"
@@ -32,6 +33,11 @@ const data = {
       title: "Playground",
       url: "playground",
       icon: SquareTerminal
+    },
+    {
+      title: "Documents",
+      url: "documents",
+      icon: Shredder
     },
     {
       title: "Models",

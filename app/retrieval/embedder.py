@@ -2,8 +2,8 @@ from enum import Enum
 from typing import List
 from abc import ABC, abstractmethod
 from sentence_transformers import SentenceTransformer
-from ..model.chat_client import OpenAILLM
-from ..config.configer import (
+from app.model.chat_client import OpenAILLM
+from app.config.configer import (
     OFFLINE_SENTENCE_TRANSFORMER_MODEL_LOCAL_PATH,
     OPENAI_EMBEDDING_MODEL,
 )

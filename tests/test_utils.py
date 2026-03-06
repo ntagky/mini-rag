@@ -1,15 +1,31 @@
-from app.model.chat_client import ChatClient, LlmModel, ChatMessage, ChatContent
+from app.model.chat_client import (
+    ChatClient,
+    LlmModel,
+    ChatMessage,
+    ChatContent,
+)
 from app.agent.rag_agent import RAGAgent
 from app.retrieval.embedder import Embedder, EmbedderModel
 from app.retrieval.indexer import ElasticsearchIndex
 from app.retrieval.ranker import TfidfRetriever
 from app.config.configer import OPENAI_EMBEDDING_DIMENSIONS
 from app.orchestrator.pipeline import Orchestrator
+from app.bootstrap.health_checks import full_environment_validation
 
 embedder = Embedder(EmbedderModel.OPENAI)
 elastic_index = ElasticsearchIndex(embedding_dim=OPENAI_EMBEDDING_DIMENSIONS)
 tfidf_retriever = TfidfRetriever()
-chat_client = ChatClient(LlmModel.OPENAI)
+model = LlmModel.OPENAI
+chat_client = ChatClient(model)
+
+
+def test_health_check():
+    all_ok, response = full_environment_validation()
+    is_openai_healthy = False
+    for check in response["checks"]:
+        if check["service"] == "OpenAI":
+            is_openai_healthy = check["status"]
+    assert is_openai_healthy is True
 
 
 def test_agent_quicker():
@@ -18,6 +34,7 @@ def test_agent_quicker():
         retriever=elastic_index,
         fallback_retriever=tfidf_retriever,
         chat_client=chat_client,
+        model=model,
         is_cli=True,
     )
     question = "hello"
@@ -32,11 +49,13 @@ def test_agent_cite_1():
         retriever=elastic_index,
         fallback_retriever=tfidf_retriever,
         chat_client=chat_client,
+        model=model,
         is_cli=True,
     )
-    question = "In what specific clinical scenarios is a randomized withdrawal study design most effective for determining long-term efficacy and treatment duration?"
+    question = "When can a short-term placebo group be used in an active control trial?"
     messages = [ChatMessage(role="user", content=[ChatContent(text=question)])]
     response = agent.run(question, messages, 3)
+    print(response)
     assert any([cite.startswith("E10") for cite in response.citations])
 
 
@@ -46,9 +65,10 @@ def test_agent_cite_2():
         retriever=elastic_index,
         fallback_retriever=tfidf_retriever,
         chat_client=chat_client,
+        model=model,
         is_cli=True,
     )
-    question = "Who must be listed as contacts in the consent document, and why does the FDA recommend a separate contact for questions regarding subjects rights?"
+    question = "What contact information must be included in a consent document for clinical trial subjects?"
     messages = [ChatMessage(role="user", content=[ChatContent(text=question)])]
     response = agent.run(question, messages, 3)
     assert any([cite.startswith("ICD") for cite in response.citations])
@@ -60,6 +80,7 @@ def test_agent_chat():
         retriever=elastic_index,
         fallback_retriever=tfidf_retriever,
         chat_client=chat_client,
+        model=model,
         is_cli=True,
     )
     question = "Okay, thank you. Bye!"
@@ -80,7 +101,9 @@ def test_agent_chat():
             role="assistant",
             content=[
                 ChatContent(
-                    text="If you cannot identify the appropriate FDA staff, call the appropriate number listed on the title page of the guidance. Contact numbers include: - Office of Communications Division of Drug Information, CDER"
+                    text="If you cannot identify the appropriate FDA staff, call the appropriate number listed on the "
+                    "title page of the guidance. Contact numbers include: "
+                    "- Office of Communications Division of Drug Information, CDER"
                 )
             ],
         ),

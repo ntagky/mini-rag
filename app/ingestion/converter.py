@@ -6,7 +6,7 @@ from ..config.configer import (
     TMP_IMAGES_DIR,
 )
 from typing import List
-from ..model.chat_client import ChatClient
+from app.model.chat_client import ChatClient
 from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
 from docling.datamodel.base_models import InputFormat
 from docling.document_converter import DocumentConverter, PdfFormatOption
@@ -18,7 +18,7 @@ from docling_core.types.doc.document import (
     TextItem,
     DoclingDocument,
 )
-from ..config.logger import get_logger
+from app.config.logger import get_logger
 
 logger = get_logger("mini-rag." + __name__)
 
@@ -160,8 +160,8 @@ class PdfToMarkdownConverter:
 
                         new_text = result.document.add_text(
                             label=DocItemLabel.TEXT,
-                            orig=response,
-                            text=response,
+                            orig=response.response,
+                            text=response.response,
                             prov=item.prov[0],
                         )
                         replacements.append((item, new_text))

@@ -1,10 +1,10 @@
 from pathlib import Path
-from .configer import (
+from app.config.configer import (
     SENTENCE_TRANSFORMER_MODEL_NAME,
     OFFLINE_SENTENCE_TRANSFORMER_MODEL_LOCAL_PATH,
 )
 from sentence_transformers import SentenceTransformer
-from ..config.logger import get_logger
+from app.config.logger import get_logger
 
 logger = get_logger("mini-rag." + __name__)
 

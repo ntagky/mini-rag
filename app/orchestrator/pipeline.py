@@ -1,22 +1,22 @@
 import uuid
 from typing import List
 from pathlib import Path
-from ..config.configer import TMP_IMAGES_DIR, OPENAI_EMBEDDING_DIMENSIONS
-from ..agent.rag_agent import RAGAgent, AgentResult
-from ..ingestion.chunker import Chunker
-from ..ingestion.loader import CorpusLoader
-from ..retrieval.embedder import Embedder, EmbedderModel
-from ..retrieval.indexer import ElasticsearchIndex, ChunkMetadata, DocumentChunk
-from ..retrieval.persistor import SqliteDb, File
-from ..model.chat_client import (
+from app.config.configer import TMP_IMAGES_DIR, OPENAI_EMBEDDING_DIMENSIONS
+from app.agent.rag_agent import RAGAgent, AgentResult
+from app.ingestion.chunker import Chunker
+from app.ingestion.loader import CorpusLoader
+from app.retrieval.embedder import Embedder, EmbedderModel
+from app.retrieval.indexer import ElasticsearchIndex, ChunkMetadata, DocumentChunk
+from app.retrieval.persistor import SqliteDb, File
+from app.model.chat_client import (
     ChatClient,
     LlmModel,
     ChatMessage,
     ChatContent,
     DEFAULT_LLM_MODEL,
 )
-from ..config.logger import get_logger
-from ..retrieval.ranker import TfidfRank, TfidfRetriever
+from app.config.logger import get_logger
+from app.retrieval.ranker import TfidfRank, TfidfRetriever
 from app.config.model_loader import load_embedding_model
 
 
@@ -60,11 +60,14 @@ class Orchestrator:
             logger.debug(
                 f"Found {len(unprocessed)} unprocessed file{'s' if len(unprocessed) > 1 else ''}.."
             )
-            documents = self.loader.load_files(set(unprocessed))
+            self.sql_db.update_ingestion_control("running")
+            documents = self.loader.load_files(
+                set(["/".join([file.path, file.filename]) for file in unprocessed])
+            )
 
             output_dir = Path(TMP_IMAGES_DIR)
             output_dir.mkdir(parents=True, exist_ok=True)
-            for corpus_file, document in zip(corpus_files, documents):
+            for file, document in zip(unprocessed, documents):
                 chunks, pages = self.chunker.chunk(document)
                 embeddings = self.embedder.embed(chunks)
 
@@ -86,10 +89,10 @@ class Orchestrator:
                 self.sql_db.create_file(
                     File(
                         id=uuid.uuid4(),
-                        filename=corpus_file.filename,
-                        path=corpus_file.path,
-                        hash=corpus_file.hash,
-                        page_count=corpus_file.pages,
+                        filename=file.filename,
+                        path=file.path,
+                        hash=file.hash,
+                        page_count=file.pages,
                         chunk_count=len(chunks),
                     )
                 )
@@ -98,7 +101,7 @@ class Orchestrator:
             # Recompute TF-IDF matrix
             chunked_data = self.elastic_index.retrieve_all()
             self.tfidf_rank.build(chunked_data)
-            self.tfidf_retriever = TfidfRetriever()
+            self.sql_db.update_ingestion_control("completed")
             return len(unprocessed)
         else:
             logger.info("Corpus files are up to date.")
@@ -125,6 +128,14 @@ class Orchestrator:
         Returns:
             Tuple[str, List]: Generated answer and its associated citations.
         """
+        if (
+            not self.tfidf_rank.exists()
+            or not self.sql_db.exists()
+            or not TfidfRetriever.exists()
+        ):
+            logger.info("No ingested files detected. Please run the ingestion first.")
+            return "No ingested files detected.", []
+
         # Create a message chain if its empty
         if len(messages) == 0:
             messages = [ChatMessage(role="user", content=[ChatContent(text=question)])]
@@ -135,9 +146,9 @@ class Orchestrator:
             self.elastic_index,
             TfidfRetriever(),
             self.chat_client[model.value],
+            model,
             is_cli,
         )
         result: AgentResult = agent.run(question, messages, top_k)
-        logger.debug(result.to_json())
 
         return result.answer, result.citations
